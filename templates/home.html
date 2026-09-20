@@ -1,0 +1,16 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<header class="topbar">
+    <span class="brand">PhrasePhrase</span>
+    <form method="post" action="{% url 'logout' %}">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-ghost">Çıkış yap</button>
+    </form>
+</header>
+
+<section class="empty-state">
+    <h2>Henüz phrase'in yok</h2>
+    <p>İlk kalıp cümleni ekle, çağrışımlarla ezberlemeye başla.</p>
+</section>
+{% endblock %}

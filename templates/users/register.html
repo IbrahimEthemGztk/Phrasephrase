@@ -1,0 +1,21 @@
+{% extends 'base.html' %}
+
+{% block title %}Kayıt ol · PhrasePhrase{% endblock %}
+
+{% block content %}
+<section class="auth-card">
+    <h1 class="brand">PhrasePhrase</h1>
+    <h2>Hesap oluştur</h2>
+
+    <form method="post" novalidate>
+        {% csrf_token %}
+        {% for error in form.non_field_errors %}<p class="error error-box">{{ error }}</p>{% endfor %}
+        {% include 'users/_field.html' with field=form.email %}
+        {% include 'users/_field.html' with field=form.password1 password=True show_help=True %}
+        {% include 'users/_field.html' with field=form.password2 password=True %}
+        <button type="submit" class="btn btn-primary">Kayıt ol</button>
+    </form>
+
+    <p class="auth-switch">Zaten hesabın var mı? <a href="{% url 'login' %}">Giriş yap</a></p>
+</section>
+{% endblock %}

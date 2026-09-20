@@ -1,0 +1,95 @@
+:root {
+    --bg: #fffaf0;
+    --text: #1f1f2e;
+    --purple: #7c3aed;
+    --orange: #ff8a3d;
+    --green: #22c55e;
+}
+
+* { box-sizing: border-box; }
+
+body {
+    margin: 0;
+    font-family: 'Nunito', system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+}
+
+.container {
+    max-width: 480px;
+    margin: 0 auto;
+    padding: 1.5rem 1rem;
+}
+
+.hero { text-align: center; padding-top: 4rem; }
+.hero h1 { font-size: 2.5rem; font-weight: 800; color: var(--purple); margin: 0 0 .5rem; }
+
+/* --- Ortak bileşenler --- */
+.brand { font-weight: 800; color: var(--purple); }
+
+.btn {
+    display: inline-block;
+    border: 0;
+    border-radius: 999px;
+    padding: .85rem 1.5rem;
+    font: inherit;
+    font-weight: 800;
+    cursor: pointer;
+}
+.btn-primary { width: 100%; background: var(--purple); color: #fff; box-shadow: 0 6px 16px rgba(124, 58, 237, .3); }
+.btn-primary:active { transform: translateY(1px); }
+.btn-ghost { background: transparent; color: var(--text); padding: .5rem .9rem; font-weight: 600; }
+
+/* --- Giriş / kayıt --- */
+.auth-card {
+    margin-top: 2rem;
+    padding: 2rem 1.5rem;
+    background: #fff;
+    border-radius: 24px;
+    box-shadow: 0 10px 30px rgba(31, 31, 46, .08);
+}
+.auth-card .brand { text-align: center; font-size: 1.75rem; margin: 0 0 .25rem; }
+.auth-card h2 { text-align: center; font-size: 1.1rem; font-weight: 600; margin: 0 0 1.5rem; }
+
+.field { margin-bottom: 1rem; }
+.field label { display: block; font-weight: 600; margin-bottom: .35rem; }
+.field input {
+    width: 100%;
+    padding: .8rem 1rem;
+    font: inherit;
+    border: 2px solid #e5e2da;
+    border-radius: 14px;
+    background: var(--bg);
+    color: var(--text);
+}
+.field input:focus { outline: none; border-color: var(--purple); }
+
+.password-field { position: relative; }
+.password-field input { padding-right: 5rem; }
+.password-toggle {
+    position: absolute;
+    top: 50%;
+    right: .5rem;
+    transform: translateY(-50%);
+    border: 0;
+    background: none;
+    color: var(--purple);
+    font: inherit;
+    font-size: .85rem;
+    font-weight: 800;
+    cursor: pointer;
+}
+
+.help { margin: .4rem 0 0; padding-left: 1.1rem; font-size: .8rem; color: #6b6b7b; }
+.error { margin: .35rem 0 0; font-size: .85rem; color: #dc2626; font-weight: 600; }
+.error-box { padding: .7rem 1rem; background: #fee2e2; border-radius: 12px; margin-bottom: 1rem; }
+
+.auth-switch { text-align: center; margin: 1.5rem 0 0; }
+.auth-switch a { color: var(--purple); font-weight: 800; }
+
+/* --- Ana ekran --- */
+.topbar { display: flex; align-items: center; justify-content: space-between; }
+.topbar .brand { font-size: 1.4rem; }
+.empty-state { text-align: center; padding: 5rem 1rem; }
+.empty-state h2 { margin: 0 0 .5rem; }
+.empty-state p { color: #6b6b7b; margin: 0; }

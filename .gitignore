@@ -1,0 +1,24 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# Django
+db.sqlite3
+staticfiles/
+media/
+
+# Ortam değişkenleri (gizli anahtarlar burada, repoya girmemeli)
+.env
+.env.*
+!.env.example
+
+# Vercel
+.vercel/
+
+# IDE / OS
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
