@@ -1,0 +1,12 @@
+<header class="topbar">
+    <span class="brand">PhrasePhrase</span>
+    <form method="post" action="{% url 'logout' %}">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-ghost">Çıkış yap</button>
+    </form>
+</header>
+<nav class="topnav" aria-label="Ana menü">
+    <a href="{% url 'home' %}"{% if active == 'cards' %} aria-current="page"{% endif %}>Kartlar</a>
+    <a href="{% url 'phrase_list' %}"{% if active == 'list' %} aria-current="page"{% endif %}>Phrase'lerim</a>
+    <a class="topnav-add" href="{% url 'phrase_create' %}">+ Ekle</a>
+</nav>

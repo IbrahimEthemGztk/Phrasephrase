@@ -1,0 +1,43 @@
+{% extends 'base.html' %}
+
+{% block title %}Phrase'lerim · PhrasePhrase{% endblock %}
+
+{% block content %}
+{% include 'includes/topbar.html' with active='list' %}
+
+<section class="page-head">
+    <h2>Phrase'lerim</h2>
+    <span class="hint-text">{{ items|length }} phrase</span>
+</section>
+
+{% if items %}
+<ul class="phrase-list">
+    {% for item in items %}
+    <li>
+        <div class="phrase-card">
+            <a class="phrase-link" href="{% url 'phrase_detail' item.phrase.pk %}">
+                <span class="phrase-original">{{ item.phrase.original_phrase }}</span>
+                <span class="phrase-translation">{{ item.phrase.translation }}</span>
+            </a>
+            <div class="phrase-meta">
+                <span class="badge badge-{{ item.status }}">{{ item.get_status_display }}</span>
+                {% if item.status == 'learned' %}
+                <form method="post" action="{% url 'phrase_relearn' item.phrase.pk %}">
+                    {% csrf_token %}
+                    <button type="submit" class="btn-link" title="Öğrenildi işaretini kaldır, kartlara geri al"
+                            aria-label="{{ item.phrase.original_phrase }} için öğrenildi işaretini geri al">↶ Geri al</button>
+                </form>
+                {% endif %}
+            </div>
+        </div>
+    </li>
+    {% endfor %}
+</ul>
+{% else %}
+<section class="empty-state">
+    <h2>Henüz phrase'in yok</h2>
+    <p>İlk kalıp cümleni ekle, çağrışımlarla ezberlemeye başla.</p>
+    <a class="btn btn-accent" href="{% url 'phrase_create' %}">İlk phrase'ini ekle</a>
+</section>
+{% endif %}
+{% endblock %}

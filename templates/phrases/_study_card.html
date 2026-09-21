@@ -1,0 +1,25 @@
+<article class="study-card" role="group" aria-roledescription="kart"
+         data-stage="1" data-id="{{ phrase.pk }}" data-title="{{ phrase.original_phrase }}"
+         data-swipe-url="{% url 'phrase_swipe' phrase.pk %}"
+         data-undo-url="{% url 'phrase_swipe_undo' phrase.pk %}">
+    <span class="stamp stamp-right" aria-hidden="true">Ezberledim</span>
+    <span class="stamp stamp-left" aria-hidden="true">Henüz değil</span>
+
+    <section class="card-part part-abstract">
+        <h3 class="section-label">Cümle</h3>
+        <p class="detail-original">{{ phrase.original_phrase }}</p>
+        <p class="detail-translation">{{ phrase.translation }}</p>
+    </section>
+
+    <section class="card-part part-breakdown">
+        <h3 class="section-label">Sesli parçalama</h3>
+        {% include 'phrases/_breakdown.html' with breakdown=phrase.word_breakdown %}
+    </section>
+
+    <section class="card-part part-story">
+        <h3 class="section-label">Çağrışım hikayesi</h3>
+        <p class="detail-story">{{ phrase.association_story|linebreaksbr }}</p>
+    </section>
+
+    <button type="button" class="reveal-btn" data-reveal>Sesli parçalamayı göster</button>
+</article>

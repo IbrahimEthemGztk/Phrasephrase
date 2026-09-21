@@ -1,34 +1,60 @@
 {% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Kartlar · PhrasePhrase{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="{% static 'css/cards.css' %}">
+{% endblock %}
 
 {% block content %}
-<header class="topbar">
-    <span class="brand">PhrasePhrase</span>
-    <form method="post" action="{% url 'logout' %}">
-        {% csrf_token %}
-        <button type="submit" class="btn btn-ghost">Çıkış yap</button>
-    </form>
-</header>
+{% include 'includes/topbar.html' with active='cards' %}
 
-<section class="page-head">
-    <h2>Phrase'lerim</h2>
-    <a class="btn btn-accent" href="{% url 'phrase_create' %}">+ Ekle</a>
-</section>
-
-{% if phrases %}
-<ul class="phrase-list">
-    {% for phrase in phrases %}
-    <li>
-        <a class="phrase-card" href="{% url 'phrase_detail' phrase.pk %}">
-            <span class="phrase-original">{{ phrase.original_phrase }}</span>
-            <span class="phrase-translation">{{ phrase.translation }}</span>
-        </a>
-    </li>
-    {% endfor %}
-</ul>
-{% else %}
+{% if total_count == 0 %}
 <section class="empty-state">
     <h2>Henüz phrase'in yok</h2>
     <p>İlk kalıp cümleni ekle, çağrışımlarla ezberlemeye başla.</p>
+    <a class="btn btn-accent" href="{% url 'phrase_create' %}">İlk phrase'ini ekle</a>
+</section>
+{% else %}
+<section class="study" data-deck-root
+         data-csrf="{{ csrf_token }}"
+         data-login-url="{% url 'login' %}"
+         data-learned="{{ learned_count }}">
+    <p class="study-counter">
+        <span>Kalan <strong data-remaining>{{ queue|length }}</strong></span>
+        <span>Öğrenilen <strong data-learned-count>{{ learned_count }}</strong>/{{ total_count }}</span>
+    </p>
+
+    <p class="study-error" data-error role="alert" hidden></p>
+
+    <div class="deck" data-deck{% if not queue %} hidden{% endif %}>
+        {% for item in queue %}
+            {% include 'phrases/_study_card.html' with phrase=item.phrase %}
+        {% endfor %}
+    </div>
+
+    <div class="study-actions" data-actions{% if not queue %} hidden{% endif %}>
+        <button type="button" class="action action-left" data-action="left"><span aria-hidden="true">✕</span> Henüz değil</button>
+        <button type="button" class="action action-undo" data-action="undo" disabled>↶ Geri al</button>
+        <button type="button" class="action action-right" data-action="right"><span aria-hidden="true">✓</span> Ezberledim</button>
+    </div>
+
+    <p class="study-hint" data-hint{% if not queue %} hidden{% endif %}>
+        Karta dokunarak sıradaki aşamayı aç. Sağa kaydır: ezberledim, sola kaydır: henüz değil.
+    </p>
+
+    <section class="empty-state study-done" data-done{% if queue %} hidden{% endif %}>
+        <h2>Hepsini öğrendin! 🎉</h2>
+        <p>Şu an çalışılacak kart kalmadı. Yeni bir phrase ekleyerek devam edebilirsin.</p>
+        <a class="btn btn-accent" href="{% url 'phrase_create' %}">+ Yeni phrase ekle</a>
+    </section>
+
+    <p class="sr-only" aria-live="polite" data-live></p>
 </section>
 {% endif %}
+{% endblock %}
+
+{% block extra_js %}
+{% if total_count %}<script src="{% static 'js/swipe-deck.js' %}"></script>{% endif %}
 {% endblock %}

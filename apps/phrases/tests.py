@@ -236,19 +236,19 @@ class PhraseDetailAndDeleteTests(TestCase):
 
     def test_delete_post_removes_phrase_and_progress(self):
         response = self.client.post(reverse('phrase_delete', args=[self.phrase.pk]))
-        self.assertRedirects(response, reverse('home'))
+        self.assertRedirects(response, reverse('phrase_list'))
         self.assertFalse(Phrase.objects.exists())
         self.assertFalse(PhraseProgress.objects.exists())
 
 
-class HomeListTests(TestCase):
-    def test_home_lists_only_own_phrases(self):
+class PhraseListTests(TestCase):
+    def test_list_shows_only_own_phrases(self):
         me = User.objects.create_user('ali@example.com', PASSWORD)
         other = User.objects.create_user('veli@example.com', PASSWORD)
         make_phrase(me, original_phrase='Benim cümlem')
         make_phrase(other, original_phrase='Başkasının cümlesi')
         self.client.force_login(me)
-        response = self.client.get(reverse('home'))
+        response = self.client.get(reverse('phrase_list'))
         self.assertContains(response, 'Benim cümlem')
         self.assertNotContains(response, 'Başkasının cümlesi')
 
