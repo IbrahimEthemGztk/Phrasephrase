@@ -1,0 +1,9 @@
+{# Kelimeler ve ses karşılıkları, orijinal cümledeki sırayla ve hizalı çiftler halinde. #}
+<ol class="breakdown">
+    {% for item in breakdown %}
+    <li class="breakdown-item">
+        <span class="breakdown-word">{{ item.original_word }}</span>
+        <span class="breakdown-hint">{{ item.sound_hint }}</span>
+    </li>
+    {% endfor %}
+</ol>

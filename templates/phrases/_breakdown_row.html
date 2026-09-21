@@ -1,0 +1,6 @@
+<div class="bd-row" data-row>
+    <span class="bd-number" data-number>{{ number }}</span>
+    <input type="text" name="original_word" value="{{ row.original_word }}" placeholder="Kelime" maxlength="{{ form.max_text_length }}" aria-label="Kelime" autocomplete="off">
+    <input type="text" name="sound_hint" value="{{ row.sound_hint }}" placeholder="Ses" maxlength="{{ form.max_text_length }}" aria-label="Ses karşılığı" autocomplete="off">
+    <button type="button" class="bd-remove" data-remove aria-label="Satırı sil">×</button>
+</div>

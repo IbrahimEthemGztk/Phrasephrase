@@ -9,8 +9,26 @@
     </form>
 </header>
 
+<section class="page-head">
+    <h2>Phrase'lerim</h2>
+    <a class="btn btn-accent" href="{% url 'phrase_create' %}">+ Ekle</a>
+</section>
+
+{% if phrases %}
+<ul class="phrase-list">
+    {% for phrase in phrases %}
+    <li>
+        <a class="phrase-card" href="{% url 'phrase_detail' phrase.pk %}">
+            <span class="phrase-original">{{ phrase.original_phrase }}</span>
+            <span class="phrase-translation">{{ phrase.translation }}</span>
+        </a>
+    </li>
+    {% endfor %}
+</ul>
+{% else %}
 <section class="empty-state">
     <h2>Henüz phrase'in yok</h2>
     <p>İlk kalıp cümleni ekle, çağrışımlarla ezberlemeye başla.</p>
 </section>
+{% endif %}
 {% endblock %}

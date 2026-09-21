@@ -5,6 +5,7 @@ Tüm ortama bağlı değerler (.env / Vercel environment variables) üzerinden o
 """
 
 import os
+import sys
 from pathlib import Path
 
 import dj_database_url
@@ -87,7 +88,17 @@ WSGI_APPLICATION = 'config.wsgi.application'
 
 DATABASE_URL = os.environ.get('DATABASE_URL', '')
 
-if DATABASE_URL:
+RUNNING_TESTS = len(sys.argv) > 1 and sys.argv[1] == 'test'
+
+if RUNNING_TESTS:
+    # Testler her zaman yerel SQLite ile çalışır; Supabase'de test veritabanı açılmaz.
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': BASE_DIR / 'db.sqlite3',
+        }
+    }
+elif DATABASE_URL:
     DATABASES = {
         'default': dj_database_url.parse(DATABASE_URL, conn_max_age=0, conn_health_checks=False)
     }
@@ -143,6 +154,9 @@ STORAGES = {
     'default': {'BACKEND': 'django.core.files.storage.FileSystemStorage'},
     'staticfiles': {'BACKEND': 'whitenoise.storage.CompressedManifestStaticFilesStorage'},
 }
+if RUNNING_TESTS:
+    # Manifest'li depolama collectstatic ister; testler ona bağımlı olmasın.
+    STORAGES['staticfiles'] = {'BACKEND': 'django.contrib.staticfiles.storage.StaticFilesStorage'}
 
 
 # Default primary key field type

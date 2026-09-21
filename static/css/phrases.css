@@ -1,0 +1,111 @@
+/* --- Ortak bileşenler (phrase ekranları) --- */
+.btn { text-decoration: none; text-align: center; }
+.btn-accent { background: var(--orange); color: #fff; padding: .55rem 1.1rem; box-shadow: 0 4px 12px rgba(255, 138, 61, .35); }
+.btn-secondary { background: #fff; color: var(--purple); border: 2px solid var(--purple); padding: .7rem 1.3rem; }
+.btn-danger { background: #ef4444; color: #fff; padding: .75rem 1.4rem; }
+.btn-sm { padding: .45rem .9rem; font-size: .85rem; border-width: 2px; }
+.btn:disabled { opacity: .4; cursor: not-allowed; }
+
+.back-link { color: var(--text); font-weight: 600; text-decoration: none; }
+.hint-text { margin: 0 0 .75rem; font-size: .85rem; color: #6b6b7b; }
+
+.card {
+    margin-top: 1rem;
+    padding: 1.5rem 1.25rem;
+    background: #fff;
+    border-radius: 24px;
+    box-shadow: 0 10px 30px rgba(31, 31, 46, .08);
+}
+.card-title { margin: 0 0 1.25rem; font-size: 1.25rem; font-weight: 800; }
+
+.field textarea {
+    width: 100%;
+    padding: .8rem 1rem;
+    font: inherit;
+    border: 2px solid #e5e2da;
+    border-radius: 14px;
+    background: var(--bg);
+    color: var(--text);
+    resize: vertical;
+}
+.field textarea:focus { outline: none; border-color: var(--purple); }
+
+/* --- Bildirim mesajları --- */
+.messages { list-style: none; margin: 0 0 1rem; padding: 0; }
+.message { padding: .7rem 1rem; border-radius: 12px; background: #dcfce7; color: #166534; font-weight: 600; }
+.message-error { background: #fee2e2; color: #991b1b; }
+
+/* --- Ana sayfa listesi --- */
+.page-head { display: flex; align-items: center; justify-content: space-between; margin: 1.5rem 0 1rem; }
+.page-head h2 { margin: 0; font-size: 1.4rem; }
+
+.phrase-list { list-style: none; margin: 0; padding: 0; display: grid; gap: .75rem; }
+.phrase-card {
+    display: block;
+    padding: 1rem 1.25rem;
+    background: #fff;
+    border-radius: 18px;
+    border-left: 6px solid var(--purple);
+    box-shadow: 0 6px 18px rgba(31, 31, 46, .07);
+    color: inherit;
+    text-decoration: none;
+}
+.phrase-list li:nth-child(3n + 2) .phrase-card { border-left-color: var(--orange); }
+.phrase-list li:nth-child(3n) .phrase-card { border-left-color: var(--green); }
+.phrase-original { display: block; font-weight: 800; font-size: 1.1rem; }
+.phrase-translation { display: block; margin-top: .15rem; color: #6b6b7b; }
+
+/* --- Sesli parçalama: kelime + ses karşılığı çiftleri --- */
+.breakdown { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: .6rem; }
+.breakdown-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-width: 4.5rem;
+    padding: .6rem .8rem;
+    background: var(--bg);
+    border: 2px solid #ece7da;
+    border-radius: 14px;
+    text-align: center;
+}
+.breakdown-word { font-weight: 800; }
+.breakdown-hint { margin-top: .25rem; padding-top: .25rem; border-top: 2px dashed #e0d9c8; color: var(--purple); font-weight: 600; }
+
+/* --- Detay --- */
+.detail-section { margin-bottom: 1.5rem; }
+.section-label { margin: 0 0 .5rem; font-size: .75rem; letter-spacing: .06em; text-transform: uppercase; color: #6b6b7b; }
+.detail-original { margin: 0; font-size: 1.5rem; font-weight: 800; line-height: 1.25; }
+.detail-translation { margin: .25rem 0 0; color: #6b6b7b; font-size: 1.05rem; }
+.detail-story { margin: 0; line-height: 1.55; }
+.detail-actions { display: flex; gap: .75rem; flex-wrap: wrap; }
+
+/* --- Form: kelime satırları --- */
+.breakdown-editor { margin: 0 0 1rem; padding: 1rem; border: 2px solid #ece7da; border-radius: 16px; }
+.breakdown-editor legend { padding: 0 .4rem; font-weight: 800; }
+.bd-rows { display: grid; gap: .5rem; margin: .75rem 0; }
+.bd-row { display: grid; grid-template-columns: 1.5rem 1fr 1fr auto; gap: .4rem; align-items: center; }
+.bd-number { text-align: center; font-weight: 800; color: var(--purple); }
+.bd-row input {
+    min-width: 0;
+    padding: .6rem .7rem;
+    font: inherit;
+    border: 2px solid #e5e2da;
+    border-radius: 12px;
+    background: var(--bg);
+    color: var(--text);
+}
+.bd-row input:focus { outline: none; border-color: var(--purple); }
+.bd-remove {
+    width: 2rem;
+    height: 2rem;
+    border: 0;
+    border-radius: 50%;
+    background: #fee2e2;
+    color: #b91c1c;
+    font-size: 1.1rem;
+    font-weight: 800;
+    cursor: pointer;
+}
+.bd-remove:disabled { opacity: .35; cursor: not-allowed; }
+
+.confirm-delete .detail-original { margin-bottom: .5rem; }

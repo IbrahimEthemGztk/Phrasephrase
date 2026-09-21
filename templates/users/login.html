@@ -10,8 +10,8 @@
     <form method="post" novalidate>
         {% csrf_token %}
         {% for error in form.non_field_errors %}<p class="error error-box">{{ error }}</p>{% endfor %}
-        {% include 'users/_field.html' with field=form.username %}
-        {% include 'users/_field.html' with field=form.password password=True %}
+        {% include 'includes/field.html' with field=form.username %}
+        {% include 'includes/field.html' with field=form.password password=True %}
         <input type="hidden" name="next" value="{{ next }}">
         <button type="submit" class="btn btn-primary">Giriş yap</button>
     </form>

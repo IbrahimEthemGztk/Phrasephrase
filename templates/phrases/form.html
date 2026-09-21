@@ -1,0 +1,49 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ title }} · PhrasePhrase{% endblock %}
+
+{% block content %}
+<header class="topbar">
+    <a class="back-link" href="{% if phrase %}{% url 'phrase_detail' phrase.pk %}{% else %}{% url 'home' %}{% endif %}">← Geri</a>
+    <span class="brand">PhrasePhrase</span>
+</header>
+
+<section class="card">
+    <h2 class="card-title">{{ title }}</h2>
+
+    <form method="post" novalidate data-phrase-form>
+        {% csrf_token %}
+        {% include 'includes/field.html' with field=form.original_phrase %}
+        {% include 'includes/field.html' with field=form.translation %}
+
+        <fieldset class="breakdown-editor">
+            <legend>Sesli parçalama</legend>
+            <p class="hint-text">Cümledeki kelimeleri sırasıyla yaz, yanına Türkçe'ye yakın sesteş karşılığını gir.</p>
+            <button type="button" class="btn btn-secondary btn-sm" data-split>Cümleyi kelimelere böl</button>
+
+            {% for error in form.non_field_errors %}<p class="error error-box">{{ error }}</p>{% endfor %}
+
+            <div class="bd-rows" data-rows>
+                {% for row in form.rows %}
+                    {% include 'phrases/_breakdown_row.html' with row=row number=forloop.counter %}
+                {% endfor %}
+            </div>
+
+            <button type="button" class="btn btn-secondary btn-sm" data-add-row>+ Kelime ekle</button>
+
+            <template data-row-template>
+                {% include 'phrases/_breakdown_row.html' with row=None number='' %}
+            </template>
+        </fieldset>
+
+        {% include 'includes/field.html' with field=form.association_story %}
+
+        <button type="submit" class="btn btn-primary">Kaydet</button>
+    </form>
+</section>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/phrase-form.js' %}"></script>
+{% endblock %}

@@ -1,0 +1,33 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ phrase.original_phrase }} · PhrasePhrase{% endblock %}
+
+{% block content %}
+<header class="topbar">
+    <a class="back-link" href="{% url 'home' %}">← Geri</a>
+    <span class="brand">PhrasePhrase</span>
+</header>
+
+<article class="card phrase-detail">
+    <section class="detail-section">
+        <h3 class="section-label">Cümle</h3>
+        <p class="detail-original">{{ phrase.original_phrase }}</p>
+        <p class="detail-translation">{{ phrase.translation }}</p>
+    </section>
+
+    <section class="detail-section">
+        <h3 class="section-label">Sesli parçalama</h3>
+        {% include 'phrases/_breakdown.html' with breakdown=phrase.word_breakdown %}
+    </section>
+
+    <section class="detail-section">
+        <h3 class="section-label">Çağrışım hikayesi</h3>
+        <p class="detail-story">{{ phrase.association_story|linebreaksbr }}</p>
+    </section>
+
+    <div class="detail-actions">
+        <a class="btn btn-secondary" href="{% url 'phrase_update' phrase.pk %}">Düzenle</a>
+        <a class="btn btn-danger" href="{% url 'phrase_delete' phrase.pk %}">Sil</a>
+    </div>
+</article>
+{% endblock %}

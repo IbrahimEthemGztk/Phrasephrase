@@ -10,9 +10,9 @@
     <form method="post" novalidate>
         {% csrf_token %}
         {% for error in form.non_field_errors %}<p class="error error-box">{{ error }}</p>{% endfor %}
-        {% include 'users/_field.html' with field=form.email %}
-        {% include 'users/_field.html' with field=form.password1 password=True show_help=True %}
-        {% include 'users/_field.html' with field=form.password2 password=True %}
+        {% include 'includes/field.html' with field=form.email %}
+        {% include 'includes/field.html' with field=form.password1 password=True show_help=True %}
+        {% include 'includes/field.html' with field=form.password2 password=True %}
         <button type="submit" class="btn btn-primary">Kayıt ol</button>
     </form>
 

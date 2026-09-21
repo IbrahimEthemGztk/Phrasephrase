@@ -1,0 +1,17 @@
+{% extends 'base.html' %}
+
+{% block title %}Phrase sil · PhrasePhrase{% endblock %}
+
+{% block content %}
+<section class="card confirm-delete">
+    <h2 class="card-title">Bu phrase silinsin mi?</h2>
+    <p class="detail-original">{{ phrase.original_phrase }}</p>
+    <p class="hint-text">Bu işlem geri alınamaz.</p>
+
+    <form method="post" class="detail-actions">
+        {% csrf_token %}
+        <a class="btn btn-secondary" href="{% url 'phrase_detail' phrase.pk %}">Vazgeç</a>
+        <button type="submit" class="btn btn-danger">Evet, sil</button>
+    </form>
+</section>
+{% endblock %}
