@@ -1,9 +1,12 @@
 <header class="topbar">
     <span class="brand">PhrasePhrase</span>
-    <form method="post" action="{% url 'logout' %}">
-        {% csrf_token %}
-        <button type="submit" class="btn btn-ghost">Çıkış yap</button>
-    </form>
+    <div class="topbar-actions">
+        <a class="btn btn-ghost topbar-stats" href="{% url 'stats' %}"{% if active == 'stats' %} aria-current="page"{% endif %}>{% include 'includes/icon.html' with name='chart' %}<span class="topbar-stats-label">İstatistik</span></a>
+        <form method="post" action="{% url 'logout' %}">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-ghost">Çıkış yap</button>
+        </form>
+    </div>
 </header>
 <nav class="topnav" aria-label="Ana menü">
     <a href="{% url 'home' %}"{% if active == 'cards' %} aria-current="page"{% endif %}>Kartlar</a>

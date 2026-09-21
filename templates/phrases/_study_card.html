@@ -1,5 +1,6 @@
 <article class="study-card" role="group" aria-roledescription="kart"
          data-stage="1" data-id="{{ phrase.pk }}" data-title="{{ phrase.original_phrase }}"
+         data-status="{{ progress.status }}" data-streak="{{ progress.review_streak }}"
          data-swipe-url="{% url 'phrase_swipe' phrase.pk %}"
          data-undo-url="{% url 'phrase_swipe_undo' phrase.pk %}">
     <span class="stamp stamp-right" aria-hidden="true">Ezberledim</span>
@@ -7,8 +8,14 @@
 
     {# Aşamalar: cümle -> sesli parçalama -> hikaye -> anlam. Anlam en sona kalır (bkz. cards.css). #}
     <section class="card-part part-abstract">
-        <h3 class="section-label">Cümle</h3>
-        <p class="detail-original">{{ phrase.original_phrase }}</p>
+        <div class="card-head">
+            <h3 class="section-label">Cümle</h3>
+            <span class="review-badge" data-review-badge{% if progress.status != 'reviewing' %} hidden{% endif %}>Tekrar · {{ progress.review_streak }}/{{ review_target }}</span>
+        </div>
+        <div class="phrase-row">
+            <p class="detail-original">{{ phrase.original_phrase }}</p>
+            {% include 'includes/speak_button.html' with text=phrase.original_phrase %}
+        </div>
     </section>
 
     <section class="card-part part-breakdown">

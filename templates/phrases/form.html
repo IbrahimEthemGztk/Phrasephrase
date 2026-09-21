@@ -14,8 +14,9 @@
 
     {% if ai_mode %}
     <p class="ai-banner">
-        ✨ Bu içerik AI tarafından üretildi. Kontrol edip düzenleyebilirsin; beğenmezsen yeniden üretebilirsin.
-        <span class="ai-remaining">Bugün kalan hak: {{ remaining }}</span>
+        {% include 'includes/icon.html' with name='sparkles' %}
+        <span>Bu içerik AI tarafından üretildi. Kontrol edip düzenleyebilirsin; beğenmezsen yeniden üretebilirsin.
+        <span class="ai-remaining">Bugün kalan hak: {{ remaining }}</span></span>
     </p>
     {% endif %}
 
@@ -51,7 +52,7 @@
         {% if ai_mode %}
         {% if category %}<input type="hidden" name="category" value="{{ category }}">{% endif %}
         <button type="submit" class="btn btn-secondary btn-block" formaction="{{ regenerate_url }}" formnovalidate data-ai-regenerate>{{ regenerate_label }}</button>
-        <p class="ai-status" data-ai-status role="status" hidden>AI hazırlıyor… Bu 5–20 saniye sürebilir.</p>
+        <p class="ai-status" data-ai-status role="status" hidden><span class="spinner" aria-hidden="true"></span>AI hazırlıyor… Bu 5–20 saniye sürebilir.</p>
         {% endif %}
     </form>
 </section>

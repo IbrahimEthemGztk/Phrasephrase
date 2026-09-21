@@ -115,20 +115,21 @@ Vercel, doğası gereği Next.js/serverless odaklı bir platformdur. Django gibi
 - id
 - user_id (FK)
 - phrase_id (FK)
-- status (enum: `learning` / `learned`)
+- status (enum: `learning` / `reviewing` / `learned`)
 - swipe_left_count (int, kaç kere "bilmiyorum" denildi)
 - swipe_right_count (int, kaç kere "biliyorum" denildi)
 - last_reviewed_at
-- next_review_at (nullable, ileri faz için spaced repetition)
+- review_streak (0-3, üst üste kaç "ezberledim"; aralıklı tekrar)
+- next_review_at (nullable, yalnızca `reviewing` durumunda dolu: kartın kuyruğa döneceği an)
 
 ---
 
 ## 6. Swipe / Tekrar Mekanizması (Prototip için basit versiyon)
 
 - Kullanıcının önünde bir **kuyruk (queue)** var: önce `status = learning` olan phrase'ler, sonra hiç görülmemişler.
-- **Sağa kaydırma (öğrendim):** `status = learned` yapılır, kuyruktan çıkar (ana döngüden düşer). İleride (spaced repetition fazında) belirli aralıklarla tekrar gösterilebilir.
-- **Sola kaydırma (öğrenemedim):** `status = learning` kalır, kartın kuyruktaki sırası korunur/öne alınır — yani kullanıcı öğrenene kadar bu kart tekrar tekrar karşısına çıkmaya devam eder. Basit yaklaşım: sola kaydırılan kart, kuyruğun sonuna değil, yakın bir sıraya (örn. 3-5 kart sonrasına) tekrar eklenir ki art arda hep aynı kartı görmesin ama sık karşılaşsın.
-- Bu mekanizma prototipte basit tutulacak; gerçek spaced repetition (Leitner sistemi, SM-2 algoritması vb.) ileri bir fazda eklenecek (bkz. Faz 6).
+- **Sağa kaydırma (ezberledim):** başarı sayacı (`review_streak`) 1 artar. Sayaç 3'e ulaşınca `status = learned` (kalıcı, kuyruktan çıkar); değilse `status = reviewing` olur, kart kuyruktan çıkar ve **24 saat sonra** (`REVIEW_INTERVAL_MINUTES`) Kartlar ekranına geri döner. İlk "ezberledim" 3 başarının ilkidir.
+- **Sola kaydırma (öğrenemedim):** başarı sayacı 0'a sıfırlanır, `status = learning` olur (tekrardaki kart için de geçerli: baştan 3 başarı gerekir), kartın kuyruktaki sırası korunur/öne alınır — yani kullanıcı öğrenene kadar bu kart tekrar tekrar karşısına çıkmaya devam eder. Basit yaklaşım: sola kaydırılan kart, kuyruğun sonuna değil, yakın bir sıraya (örn. 3-5 kart sonrasına) tekrar eklenir ki art arda hep aynı kartı görmesin ama sık karşılaşsın.
+- Aralıklı tekrar Faz 6'da bu basit kural setiyle eklendi (sabit 24 saat, 3 başarı). Leitner/SM-2 gibi değişken aralıklı algoritmalar ileride düşünülebilir.
 
 ---
 

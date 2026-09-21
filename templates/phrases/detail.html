@@ -11,7 +11,10 @@
 <article class="card phrase-detail">
     <section class="detail-section">
         <h3 class="section-label">Cümle</h3>
-        <p class="detail-original">{{ phrase.original_phrase }}</p>
+        <div class="phrase-row">
+            <p class="detail-original">{{ phrase.original_phrase }}</p>
+            {% include 'includes/speak_button.html' with text=phrase.original_phrase %}
+        </div>
         <p class="detail-translation">{{ phrase.translation }}</p>
     </section>
 

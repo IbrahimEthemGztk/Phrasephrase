@@ -17,6 +17,14 @@ class RegisterForm(UserCreationForm):
         self.fields['password1'].widget.attrs['autocomplete'] = 'new-password'
         self.fields['password2'].widget.attrs['autocomplete'] = 'new-password'
 
+    def _post_clean(self):
+        super()._post_clean()
+        # Django parola kuralı hatalarını "password2"ye ekler; kullanıcı bunları asıl parola alanının altında görsün.
+        if self.has_error('password2') and not self.has_error('password2', code='password_mismatch'):
+            errors = self.errors.as_data()['password2']
+            del self._errors['password2']
+            self.add_error('password1', errors)
+
     def clean_email(self):
         email = self.cleaned_data['email'].lower()
         if User.objects.filter(email__iexact=email).exists():

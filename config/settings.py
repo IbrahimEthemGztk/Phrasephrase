@@ -159,6 +159,11 @@ if RUNNING_TESTS:
     STORAGES['staticfiles'] = {'BACKEND': 'django.contrib.staticfiles.storage.StaticFilesStorage'}
 
 
+# Aralıklı tekrar: "ezberledim" denen kart bu kadar dakika sonra Kartlar ekranına geri döner (varsayılan 1440 = 24 saat).
+# Denemek için .env'de REVIEW_INTERVAL_MINUTES=1 gibi küçük bir değer verilebilir.
+REVIEW_INTERVAL_MINUTES = int(os.environ.get('REVIEW_INTERVAL_MINUTES', '1440'))
+
+
 # Default primary key field type
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'

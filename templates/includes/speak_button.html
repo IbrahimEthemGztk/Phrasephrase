@@ -1,0 +1,2 @@
+{# İngilizce metni tarayıcının konuşma sentezi ile okuyan düğme. Kullanım: include ... with text=phrase.original_phrase. Desteklenmiyorsa speak.js gizli bırakır. #}
+<button type="button" class="speak-btn" data-speak="{{ text }}" aria-label="İngilizce okunuşunu dinle" title="Dinle" hidden>{% include 'includes/icon.html' with name='volume' %}</button>

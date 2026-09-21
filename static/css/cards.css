@@ -1,9 +1,14 @@
-/* --- Çalışma ekranı: kart yığını --- */
-.study-counter { display: flex; justify-content: space-between; margin: 1.25rem 0 .75rem; font-weight: 600; color: #6b6b7b; }
+/* ==========================================================================
+   Çalışma ekranı: kart yığını ve aksiyon düğmeleri
+   ========================================================================== */
+
+.study { max-width: 480px; margin: 0 auto; }
+
+.study-counter { display: flex; flex-wrap: wrap; justify-content: space-between; gap: .25rem .75rem; margin: 1.25rem 0 .75rem; font-weight: 600; color: var(--muted); }
 .study-counter strong { color: var(--text); }
 
-.study-error { margin: 0 0 .75rem; padding: .7rem 1rem; border-radius: 12px; background: #fee2e2; color: #991b1b; font-weight: 600; }
-.study-hint { margin: 1rem 0 0; text-align: center; font-size: .8rem; color: #8a8a99; }
+.study-error { margin: 0 0 .75rem; padding: .7rem 1rem; border-radius: var(--radius-sm); background: var(--red-soft); color: var(--red-dark); font-weight: 600; }
+.study-hint { margin: 1rem 0 0; text-align: center; font-size: .8rem; color: var(--muted); }
 
 /* Kartlar aynı grid hücresinde üst üste durur; arkadaki kartların alt kenarı görünür. */
 .deck { display: grid; padding-bottom: 2rem; margin-bottom: .5rem; }
@@ -16,9 +21,9 @@
     gap: 1.25rem;
     min-height: 22rem;
     padding: 1.5rem 1.25rem;
-    background: #fff;
-    border-radius: 24px;
-    box-shadow: 0 12px 32px rgba(31, 31, 46, .12);
+    background: var(--surface);
+    border-radius: var(--radius-xl);
+    box-shadow: var(--shadow-deck);
     transform-origin: 50% 100%;
     transition: transform .25s ease;
     touch-action: pan-y;
@@ -46,8 +51,8 @@
     pointer-events: none;
     opacity: 0;
 }
-.stamp-right { left: 1rem; color: var(--green); transform: rotate(-12deg); opacity: var(--stamp-right, 0); }
-.stamp-left { right: 1rem; color: var(--orange); transform: rotate(12deg); opacity: var(--stamp-left, 0); }
+.stamp-right { left: 1rem; color: var(--green-strong); transform: rotate(-12deg); opacity: var(--stamp-right, 0); }
+.stamp-left { right: 1rem; color: var(--orange-dark); transform: rotate(12deg); opacity: var(--stamp-left, 0); }
 
 /* Aşamalı gösterim: 1 = cümle, 2 = + sesli parçalama, 3 = + hikaye, 4 = + anlam (en sona kalır) */
 .study-card[data-stage="1"] .part-breakdown,
@@ -57,7 +62,7 @@
 .study-card[data-stage="2"] .part-meaning,
 .study-card[data-stage="3"] .part-meaning { display: none; }
 
-.detail-meaning { margin: 0; font-size: 1.25rem; font-weight: 800; color: var(--purple); }
+.detail-meaning { margin: 0; font-size: var(--fs-xl); font-weight: 800; color: var(--purple); }
 
 .card-part { animation: part-in .3s ease; }
 @keyframes part-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
@@ -65,10 +70,11 @@
 .reveal-btn {
     margin-top: auto;
     align-self: center;
+    min-height: var(--tap);
     padding: .6rem 1.2rem;
     border: 2px solid var(--purple);
-    border-radius: 999px;
-    background: #fff;
+    border-radius: var(--radius-pill);
+    background: var(--surface);
     color: var(--purple);
     font: inherit;
     font-weight: 800;
@@ -77,17 +83,53 @@
 
 /* --- Aksiyon düğmeleri --- */
 .study-actions { display: grid; grid-template-columns: 1fr auto 1fr; gap: .6rem; align-items: center; }
-.action { border: 0; border-radius: 999px; padding: .8rem .5rem; font: inherit; font-size: .9rem; font-weight: 800; white-space: nowrap; cursor: pointer; }
 .study-actions.is-finished { grid-template-columns: 1fr; justify-items: center; }
-.action-left { background: #fff; color: #c2410c; border: 2px solid var(--orange); }
-.action-right { background: var(--green); color: #fff; box-shadow: 0 6px 16px rgba(34, 197, 94, .3); }
-.action-undo { background: transparent; color: #6b6b7b; font-weight: 600; padding: .6rem .75rem; }
+.action {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: .4rem;
+    min-height: 3rem;
+    border: 0;
+    border-radius: var(--radius-pill);
+    padding: .8rem .5rem;
+    font: inherit;
+    font-size: .9rem;
+    font-weight: 800;
+    white-space: nowrap;
+    cursor: pointer;
+    transition: transform .1s ease;
+}
+.action:active:not(:disabled) { transform: scale(.97); }
+.action-left { background: var(--surface); color: var(--orange-dark); border: 2px solid var(--orange); }
+.action-right { background: var(--green-strong); color: #fff; box-shadow: 0 6px 16px rgba(21, 128, 61, .3); }
+.action-undo { background: transparent; color: var(--muted); font-weight: 600; padding: .6rem .75rem; }
 .action:disabled { opacity: .4; cursor: not-allowed; }
 
 .study-done { padding-top: 3rem; }
-.study-done .btn { margin-top: 1.25rem; }
+
+/* Çok dar ekranlarda "Geri al" yalnızca ikon olarak kalır (erişilebilir ad korunur) */
+@media (max-width: 380px) {
+    .action-undo .action-label {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        overflow: hidden;
+        clip: rect(0, 0, 0, 0);
+        white-space: nowrap;
+    }
+    .action-undo { min-width: 3rem; padding: .6rem; }
+    .study-actions { gap: .4rem; }
+    .action { gap: .3rem; padding-inline: .4rem; font-size: .85rem; }
+    .study-card { padding: 1.25rem 1rem; }
+}
 
 @media (prefers-reduced-motion: reduce) {
-    .study-card { transition: none; }
+    .study-card, .action { transition: none; }
     .card-part { animation: none; }
 }
+
+/* --- Aralıklı tekrar göstergeleri --- */
+.card-head { display: flex; align-items: center; justify-content: space-between; gap: .5rem; margin-bottom: .5rem; }
+.card-head .section-label { margin: 0; }
+.review-badge { padding: .15rem .65rem; border-radius: var(--radius-pill); background: var(--purple-soft); color: var(--purple-dark); font-size: var(--fs-xs); font-weight: 800; white-space: nowrap; }

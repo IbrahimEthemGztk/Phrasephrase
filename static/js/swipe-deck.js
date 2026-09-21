@@ -1,5 +1,7 @@
 // Kart yığını: sürükleyerek / düğmeyle / klavyeyle swipe, dokunarak aşamalı gösterim, geri al.
 // Kartlar sunucuda render edilir; deck'in çocuk sırası kuyruk sırasıdır (ilk çocuk = üstteki kart).
+// Aralıklı tekrar sunucuda yürür: "ezberledim" kartı bir süre (varsayılan 24 saat) sonra geri getirir, 3 başarıda kalıcı öğrenilir.
+// Sayaçlar ve kart durumu sunucunun cevabına göre güncellenir.
 (function () {
     const root = document.querySelector('[data-deck-root]');
     if (!root) return;
@@ -10,6 +12,10 @@
     const doneBox = root.querySelector('[data-done]');
     const remainingEl = root.querySelector('[data-remaining]');
     const learnedEl = root.querySelector('[data-learned-count]');
+    const reviewingEl = root.querySelector('[data-reviewing-count]');
+    const reviewingBox = root.querySelector('[data-reviewing-box]');
+    const doneTitle = root.querySelector('[data-done-title]');
+    const doneText = root.querySelector('[data-done-text]');
     const errorBox = root.querySelector('[data-error]');
     const liveRegion = root.querySelector('[data-live]');
     const leftButton = root.querySelector('[data-action="left"]');
@@ -18,6 +24,9 @@
 
     const csrfToken = root.dataset.csrf;
     const loginUrl = root.dataset.loginUrl;
+    const total = Number(root.dataset.total) || 0;
+    const reviewTarget = Number(root.dataset.reviewTarget) || 3;
+    const serverNextReview = root.dataset.nextReview ? new Date(root.dataset.nextReview) : null;
 
     const VISIBLE_CARDS = 3;     // yığında görünen kart sayısı
     const COMMIT_RATIO = 0.3;    // kart genişliğinin bu oranından fazla sürüklenirse karar verilir
@@ -37,8 +46,10 @@
     const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
 
     let learned = Number(root.dataset.learned) || 0;
+    let reviewing = Number(root.dataset.reviewing) || 0;
     let busy = false;        // animasyon veya sunucu isteği sürerken yeni işlem alınmaz
-    let lastSwipe = null;    // { card } - yalnızca en son "ezberledim" geri alınabilir; "henüz değil" geri alınamaz
+    let lastSwipe = null;    // { card, status } - yalnızca en son "ezberledim" geri alınabilir; "henüz değil" geri alınamaz
+    const upcoming = new Map();   // bu oturumda "tekrarda"ya giren kartların (id) tekrar zamanı
     let drag = null;
 
     const getCards = () => Array.from(deck.children);
@@ -66,6 +77,50 @@
         errorBox.hidden = true;
     }
 
+    // Sayaçlar: kartın sunucudaki durumu değişince ilgili sayaç kayar.
+    function shiftCounts(from, to) {
+        if (from === to) return;
+        if (from === 'learned') learned -= 1;
+        if (from === 'reviewing') reviewing -= 1;
+        if (to === 'learned') learned += 1;
+        if (to === 'reviewing') reviewing += 1;
+    }
+
+    // Kartın durumunu sunucu cevabına göre günceller ve "Tekrar · 1/3" rozetini yeniler.
+    function applyServerState(card, result) {
+        card.dataset.status = result.status;
+        card.dataset.streak = result.review_streak;
+        if (result.status === 'reviewing' && result.next_review_at) {
+            upcoming.set(card.dataset.id, new Date(result.next_review_at));
+        } else {
+            upcoming.delete(card.dataset.id);
+        }
+        const badge = card.querySelector('[data-review-badge]');
+        if (badge) {
+            badge.hidden = result.status !== 'reviewing';
+            badge.textContent = `Tekrar · ${result.review_streak}/${reviewTarget}`;
+        }
+    }
+
+    function nextReviewDate() {
+        const dates = [...upcoming.values()];
+        if (serverNextReview) dates.push(serverNextReview);
+        return dates.length ? new Date(Math.min(...dates)) : null;
+    }
+
+    function renderDone() {
+        if (learned >= total) {
+            doneTitle.textContent = 'Hepsini öğrendin! 🎉';
+            doneText.textContent = 'Şu an çalışılacak kart kalmadı. Yeni bir phrase ekleyerek devam edebilirsin.';
+            return;
+        }
+        const next = nextReviewDate();
+        doneTitle.textContent = 'Bugünlük bu kadar! 🎉';
+        doneText.textContent = 'Tekrardaki kartlar zamanı gelince burada yeniden çıkacak.' + (next
+            ? ` Sıradaki tekrar: ${next.toLocaleString('tr-TR', { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' })}.`
+            : '');
+    }
+
     function layout() {
         const cards = getCards();
         cards.forEach((card, index) => {
@@ -77,6 +132,9 @@
         const empty = cards.length === 0;
         remainingEl.textContent = cards.length;
         learnedEl.textContent = learned;
+        reviewingEl.textContent = reviewing;
+        reviewingBox.hidden = reviewing <= 0;
+        if (empty) renderDone();
         deck.hidden = empty;
         hint.hidden = empty;
         doneBox.hidden = !empty;
@@ -179,9 +237,7 @@
     function moveOut(card, direction) {
         const record = { card, direction, stage: Number(card.dataset.stage) };
         deck.removeChild(card);
-        if (direction === 'right') {
-            learned += 1;
-        } else {
+        if (direction === 'left') {
             const others = getCards();
             const index = Math.min(randomInt(REINSERT_MIN, REINSERT_MAX), others.length);
             deck.insertBefore(card, others[index] || null);
@@ -191,7 +247,6 @@
     }
 
     function revertMoveOut(record) {
-        if (record.direction === 'right') learned -= 1;
         deck.insertBefore(record.card, deck.firstElementChild);
         setStage(record.card, record.stage);
     }
@@ -204,6 +259,7 @@
         busy = true;
         clearError();
         layout();
+        document.dispatchEvent(new Event('deck:card-moved'));   // sesli okuma (speak.js) varsa kes
 
         await flyOut(card, direction);
         const record = moveOut(card, direction);
@@ -211,14 +267,19 @@
         layout();
 
         try {
-            await post(card.dataset.swipeUrl, direction);
+            const result = await post(card.dataset.swipeUrl, direction);
+            shiftCounts(card.dataset.status, result.status);
+            applyServerState(card, result);
             // "Henüz değil" geri alınabilir bir işlem sayılmaz; öncekini de geçersiz kılar (yalnızca en son swipe geri alınır).
-            lastSwipe = direction === 'right' ? { card } : null;
+            lastSwipe = direction === 'right' ? { card, status: result.status } : null;
             const next = getCards()[0];
-            announce(
-                (direction === 'right' ? 'Ezberledim olarak işaretlendi. ' : 'Henüz değil olarak işaretlendi. ') +
-                (next ? `Sıradaki kart: ${next.dataset.title}` : 'Tüm kartlar tamamlandı.')
-            );
+            let message = 'Henüz değil olarak işaretlendi. ';
+            if (direction === 'right') {
+                message = result.status === 'learned'
+                    ? 'Ezberledim: kalıcı olarak öğrenildi. '
+                    : `Ezberledim olarak işaretlendi (${result.review_streak}/${reviewTarget}), tekrar için geri gelecek. `;
+            }
+            announce(message + (next ? `Sıradaki kart: ${next.dataset.title}` : 'Tüm kartlar tamamlandı.'));
         } catch (error) {
             revertMoveOut(record);
             handleFailure();
@@ -228,25 +289,25 @@
         }
     }
 
-    // "Ezberledim"i geri alır: kart kuyruğun başına döner, öğrenildi işareti kalkar.
+    // "Ezberledim"i geri alır: kart kuyruğun başına döner, başarı sayacı bir geri gider.
     async function undo() {
         if (busy || !lastSwipe) return;
-        const { card } = lastSwipe;
+        const { card, status } = lastSwipe;
 
         busy = true;
         clearError();
 
-        learned -= 1;
         deck.insertBefore(card, deck.firstElementChild);
         setStage(card, 1);
         layout();
 
         try {
-            await post(card.dataset.undoUrl, 'right');
+            const result = await post(card.dataset.undoUrl, 'right');
+            shiftCounts(status, result.status);
+            applyServerState(card, result);
             lastSwipe = null;
             announce(`Geri alındı. Kart: ${card.dataset.title}`);
         } catch (error) {
-            learned += 1;
             deck.removeChild(card);
             handleFailure();
         } finally {

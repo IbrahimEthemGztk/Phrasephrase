@@ -1,0 +1,72 @@
+{% extends 'base.html' %}
+{% load phrase_extras %}
+
+{% block title %}İstatistik · PhrasePhrase{% endblock %}
+
+{% block content %}
+{% include 'includes/topbar.html' with active='stats' %}
+
+<section class="page-head">
+    <h2>İstatistik</h2>
+</section>
+
+{% if summary.total == 0 %}
+<section class="empty-state">
+    <h2>Henüz phrase'in yok</h2>
+    <p>İlk kalıp cümleni ekle; ilerlemen burada görünecek.</p>
+    <a class="btn btn-accent" href="{% url 'phrase_create' %}">İlk phrase'ini ekle</a>
+</section>
+{% else %}
+<section class="card stats-hero">
+    <p class="stats-headline"><strong>{{ summary.learned }}</strong> / {{ summary.total }} phrase kalıcı öğrenildi</p>
+    <div class="stack-bar" role="img"
+         aria-label="{{ summary.total }} phraseın {{ summary.learned }} tanesi öğrenildi, {{ summary.reviewing }} tanesi tekrarda, {{ summary.learning }} tanesi öğreniliyor">
+        <span class="stack-learned" style="flex: {{ summary.learned }}"></span>
+        <span class="stack-reviewing" style="flex: {{ summary.reviewing }}"></span>
+        <span class="stack-learning" style="flex: {{ summary.learning }}"></span>
+    </div>
+</section>
+
+<section class="stat-grid" aria-label="Durumlara göre phrase sayıları">
+    <div class="stat-tile stat-learning">
+        <p class="stat-value">{{ summary.learning }}</p>
+        <p class="stat-label">Öğreniliyor</p>
+    </div>
+    <div class="stat-tile stat-reviewing">
+        <p class="stat-value">{{ summary.reviewing }}</p>
+        <p class="stat-label">Tekrarda</p>
+    </div>
+    <div class="stat-tile stat-learned">
+        <p class="stat-value">{{ summary.learned }}</p>
+        <p class="stat-label">Öğrenildi</p>
+    </div>
+    <div class="stat-tile stat-today">
+        <p class="stat-value">{{ summary.queue_size }}</p>
+        <p class="stat-label">Şu an çalışılacak</p>
+    </div>
+</section>
+
+<section class="card">
+    <h3 class="section-label">Tekrar</h3>
+    {% if summary.due_reviews %}
+    <p class="stat-note"><strong>{{ summary.due_reviews }}</strong> kartın tekrar zamanı geldi.</p>
+    {% endif %}
+    {% if summary.next_review_at %}
+    <p class="stat-note">Sıradaki tekrar: <strong>{{ summary.next_review_at|date:"j F, H:i" }}</strong> ({{ summary.next_review_at|until_text }})</p>
+    {% elif not summary.due_reviews %}
+    <p class="stat-note">Şu an bekleyen bir tekrar yok.</p>
+    {% endif %}
+    <p class="hint-text">Bir kartı üst üste {{ review_target }} kez "Ezberledim" dersen kalıcı öğrenilir. Her başarıdan {{ review_interval }} sonra tekrar gelir; "Henüz değil" dersen baştan başlar.</p>
+</section>
+
+<section class="card">
+    <h3 class="section-label">Genel</h3>
+    <dl class="fact-list">
+        <div><dt>Manuel eklenen</dt><dd>{{ sources.manual }}</dd></div>
+        <div><dt>AI ile üretilen</dt><dd>{{ sources.ai_generated }}</dd></div>
+        <div><dt>Toplam "Ezberledim"</dt><dd>{{ summary.right_total }}</dd></div>
+        <div><dt>Toplam "Henüz değil"</dt><dd>{{ summary.left_total }}</dd></div>
+    </dl>
+</section>
+{% endif %}
+{% endblock %}

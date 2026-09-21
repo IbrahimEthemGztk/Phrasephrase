@@ -1,0 +1,11 @@
+{% extends 'base.html' %}
+
+{% block title %}Oturum süresi doldu · PhrasePhrase{% endblock %}
+
+{% block content %}
+<section class="empty-state error-page">
+    <h1>Oturum süresi doldu</h1>
+    <p>Bu sayfa çok uzun süre açık kaldığı için işlemin güvenlik doğrulaması geçersiz oldu. Sayfayı yenileyip tekrar dene.</p>
+    <a class="btn btn-accent" href="{% url 'home' %}">Ana sayfaya dön</a>
+</section>
+{% endblock %}

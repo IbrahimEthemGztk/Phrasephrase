@@ -10,7 +10,7 @@
 </header>
 
 <section class="card">
-    <h2 class="card-title">✨ AI ile üret</h2>
+    <h2 class="card-title title-with-icon">{% include 'includes/icon.html' with name='sparkles' %}AI ile üret</h2>
     <p class="hint-text">
         Öğrenmek istediğin İngilizce cümleyi ya da deyimi yaz. AI kelime kelime ses karşılıklarını ve bir
         çağrışım hikayesi hazırlar; kaydetmeden önce düzenleyebilirsin.
@@ -25,7 +25,7 @@
         {% for error in form.non_field_errors %}<p class="error error-box">{{ error }}</p>{% endfor %}
         {% include 'includes/field.html' with field=form.original_phrase %}
         <button type="submit" class="btn btn-primary"{% if not ai_enabled %} disabled{% endif %}>Üret</button>
-        <p class="ai-status" data-ai-status role="status" hidden>AI hazırlıyor… Bu 5–20 saniye sürebilir.</p>
+        <p class="ai-status" data-ai-status role="status" hidden><span class="spinner" aria-hidden="true"></span>AI hazırlıyor… Bu 5–20 saniye sürebilir.</p>
     </form>
 
     <p class="hint-text ai-quota">Bugün kalan hak: {{ remaining }} / {{ daily_limit }}</p>

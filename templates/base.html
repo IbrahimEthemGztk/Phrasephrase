@@ -3,7 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#7c3aed">
     <title>{% block title %}PhrasePhrase{% endblock %}</title>
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='9' fill='%237c3aed'/%3E%3Ctext x='16' y='23' font-family='sans-serif' font-size='20' font-weight='800' text-anchor='middle' fill='%23fff'%3EP%3C/text%3E%3C/svg%3E">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;800&display=swap" rel="stylesheet">
@@ -15,12 +17,13 @@
     <main class="container">
         {% if messages %}
         <ul class="messages">
-            {% for message in messages %}<li class="message message-{{ message.tags }}">{{ message }}</li>{% endfor %}
+            {% for message in messages %}<li class="message message-{{ message.tags }}" role="{% if message.level >= 40 %}alert{% else %}status{% endif %}">{{ message }}</li>{% endfor %}
         </ul>
         {% endif %}
         {% block content %}{% endblock %}
     </main>
     <script src="{% static 'js/main.js' %}"></script>
+    <script src="{% static 'js/speak.js' %}"></script>
     {% block extra_js %}{% endblock %}
 </body>
 </html>

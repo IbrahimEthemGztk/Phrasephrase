@@ -34,6 +34,7 @@ class Phrase(models.Model):
 class PhraseProgress(models.Model):
     class Status(models.TextChoices):
         LEARNING = 'learning', 'Öğreniliyor'
+        REVIEWING = 'reviewing', 'Tekrarda'
         LEARNED = 'learned', 'Öğrenildi'
 
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='phrase_progress')
@@ -41,7 +42,10 @@ class PhraseProgress(models.Model):
     status = models.CharField(max_length=10, choices=Status.choices, default=Status.LEARNING)
     swipe_left_count = models.PositiveIntegerField(default=0)
     swipe_right_count = models.PositiveIntegerField(default=0)
+    # Aralıklı tekrar: üst üste kaç kez "ezberledim" denildi (0-3). 3'e ulaşınca kart kalıcı `learned` olur.
+    review_streak = models.PositiveSmallIntegerField(default=0)
     last_reviewed_at = models.DateTimeField(null=True, blank=True)
+    # Yalnızca `reviewing` durumunda dolu: kartın Kartlar ekranına yeniden gireceği an.
     next_review_at = models.DateTimeField(null=True, blank=True)
 
     class Meta:

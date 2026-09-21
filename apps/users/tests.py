@@ -38,6 +38,34 @@ class RegisterTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertFalse(User.objects.exists())
 
+    def test_password_rule_errors_appear_on_password1_not_confirmation(self):
+        response = self.client.post(reverse('register'), {
+            'email': 'ali@example.com', 'password1': 'k1', 'password2': 'k1',
+        })
+        form = response.context['form']
+        self.assertTrue(form.errors.get('password1'))
+        self.assertFalse(form.errors.get('password2'))
+
+    def test_password_mismatch_error_stays_on_confirmation(self):
+        response = self.client.post(reverse('register'), {
+            'email': 'ali@example.com', 'password1': PASSWORD, 'password2': 'baska-parola-456',
+        })
+        form = response.context['form']
+        self.assertTrue(form.errors.get('password2'))
+        self.assertFalse(form.errors.get('password1'))
+
+
+class ErrorPageTests(TestCase):
+    def test_unknown_url_renders_custom_404(self):
+        response = self.client.get('/olmayan-sayfa/')
+        self.assertEqual(response.status_code, 404)
+        self.assertContains(response, 'Bu sayfayı bulamadık', status_code=404)
+
+    def test_500_template_is_standalone(self):
+        from django.template.loader import render_to_string
+        html = render_to_string('500.html')
+        self.assertIn('Bir sorun oluştu', html)
+
 
 class LoginLogoutTests(TestCase):
     def setUp(self):

@@ -3,7 +3,6 @@ from functools import wraps
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
-from django.db.models import Count, Q
 from django.http import Http404, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
@@ -12,7 +11,10 @@ from django.views.decorators.http import require_POST
 from . import ai
 from .forms import AIAutoForm, AIPhraseInputForm, PhraseForm
 from .models import Phrase, PhraseProgress
-from .services import DIRECTIONS, get_study_queue, record_swipe, restudy, undo_swipe
+from .services import (
+    DIRECTIONS, LEFT, REVIEW_TARGET, RIGHT, get_progress_summary, get_source_counts, get_study_queue, record_swipe,
+    restudy, review_interval_label, undo_swipe,
+)
 
 
 def _get_own_phrase(request, pk):
@@ -31,21 +33,32 @@ def json_login_required(view):
 
 @login_required
 def home(request):
-    counts = request.user.phrase_progress.aggregate(
-        total=Count('id'),
-        learned=Count('id', filter=Q(status=PhraseProgress.Status.LEARNED)),
-    )
+    summary = get_progress_summary(request.user)
     return render(request, 'home.html', {
         'queue': get_study_queue(request.user),
-        'total_count': counts['total'],
-        'learned_count': counts['learned'],
+        'total_count': summary['total'],
+        'learned_count': summary['learned'],
+        'reviewing_count': summary['reviewing'],
+        'next_review_at': summary['next_review_at'],
+        'review_target': REVIEW_TARGET,
+        'review_interval': review_interval_label(),
+    })
+
+
+@login_required
+def stats(request):
+    return render(request, 'phrases/stats.html', {
+        'summary': get_progress_summary(request.user),
+        'sources': get_source_counts(request.user),
+        'review_target': REVIEW_TARGET,
+        'review_interval': review_interval_label(),
     })
 
 
 @login_required
 def phrase_list(request):
     items = request.user.phrase_progress.select_related('phrase').order_by('-phrase__created_at', '-phrase_id')
-    return render(request, 'phrases/list.html', {'items': items})
+    return render(request, 'phrases/list.html', {'items': items, 'review_target': REVIEW_TARGET})
 
 
 @login_required
@@ -213,6 +226,8 @@ def phrase_relearn(request, pk):
 def _progress_json(progress):
     return JsonResponse({
         'status': progress.status,
+        'review_streak': progress.review_streak,
+        'next_review_at': progress.next_review_at.isoformat() if progress.next_review_at else None,
         'swipe_left_count': progress.swipe_left_count,
         'swipe_right_count': progress.swipe_right_count,
     })
@@ -234,9 +249,11 @@ def phrase_swipe(request, pk):
 @require_POST
 def phrase_swipe_undo(request, pk):
     direction = request.POST.get('direction')
-    if direction not in DIRECTIONS:
+    if direction == LEFT:
+        return JsonResponse({'error': 'Yalnızca "ezberledim" geri alınabilir.'}, status=400)
+    if direction != RIGHT:
         return JsonResponse({'error': 'Geçersiz yön.'}, status=400)
-    progress = undo_swipe(request.user, pk, direction)
+    progress = undo_swipe(request.user, pk)
     if progress is None:
         exists = PhraseProgress.objects.filter(user=request.user, phrase_id=pk).exists()
         if not exists:

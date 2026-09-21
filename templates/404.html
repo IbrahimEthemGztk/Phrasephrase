@@ -1,0 +1,12 @@
+{% extends 'base.html' %}
+
+{% block title %}Sayfa bulunamadı · PhrasePhrase{% endblock %}
+
+{% block content %}
+<section class="empty-state error-page">
+    <p class="error-code" aria-hidden="true">404</p>
+    <h1>Bu sayfayı bulamadık</h1>
+    <p>Aradığın sayfa taşınmış ya da hiç var olmamış olabilir.</p>
+    <a class="btn btn-accent" href="{% url 'home' %}">Ana sayfaya dön</a>
+</section>
+{% endblock %}

@@ -66,12 +66,14 @@ class SwipeEndpointTests(TestCase):
         self.phrase = make_phrase(self.user)
         self.url = reverse('phrase_swipe', args=[self.phrase.pk])
 
-    def test_swipe_right_marks_learned(self):
+    def test_first_swipe_right_starts_the_review_cycle_instead_of_learning_for_good(self):
         response = self.client.post(self.url, {'direction': 'right'})
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.json()['status'], 'learned')
+        data = response.json()
+        self.assertEqual((data['status'], data['review_streak']), ('reviewing', 1))
+        self.assertIsNotNone(data['next_review_at'])
         progress = progress_of(self.phrase)
-        self.assertEqual(progress.status, PhraseProgress.Status.LEARNED)
+        self.assertEqual(progress.status, PhraseProgress.Status.REVIEWING)
         self.assertEqual((progress.swipe_right_count, progress.swipe_left_count), (1, 0))
         self.assertIsNotNone(progress.last_reviewed_at)
 
@@ -135,30 +137,24 @@ class SwipeUndoTests(TestCase):
         self.assertEqual((progress.swipe_right_count, progress.swipe_left_count), (0, 0))
         self.assertIsNone(progress.last_reviewed_at)
 
-    def test_undo_left_decrements_only_the_left_count(self):
+    def test_undo_left_is_rejected_because_the_reset_streak_cannot_be_restored(self):
         self.client.post(self.swipe_url, {'direction': 'left'})
-        self.client.post(self.swipe_url, {'direction': 'left'})
-        self.client.post(self.undo_url, {'direction': 'left'})
+        response = self.client.post(self.undo_url, {'direction': 'left'})
+        self.assertEqual(response.status_code, 400)
         progress = progress_of(self.phrase)
         self.assertEqual(progress.swipe_left_count, 1)
         self.assertIsNotNone(progress.last_reviewed_at)
 
-    def test_undo_left_back_to_zero_makes_card_unseen_again(self):
-        self.client.post(self.swipe_url, {'direction': 'left'})
-        self.client.post(self.undo_url, {'direction': 'left'})
-        self.assertIsNone(progress_of(self.phrase).last_reviewed_at)
-
     def test_undo_with_nothing_to_undo_is_409_and_never_goes_negative(self):
-        for direction in ('right', 'left'):
-            self.assertEqual(self.client.post(self.undo_url, {'direction': direction}).status_code, 409)
+        self.assertEqual(self.client.post(self.undo_url, {'direction': 'right'}).status_code, 409)
         self.client.post(self.swipe_url, {'direction': 'right'})
         self.client.post(self.undo_url, {'direction': 'right'})
         self.assertEqual(self.client.post(self.undo_url, {'direction': 'right'}).status_code, 409)
         progress = progress_of(self.phrase)
         self.assertEqual((progress.swipe_right_count, progress.swipe_left_count), (0, 0))
 
-    def test_undo_right_requires_learned_status(self):
-        set_progress(self.phrase, swipe_right_count=1)   # sayaç var ama kart öğrenilmiş değil
+    def test_undo_right_requires_a_completed_success(self):
+        set_progress(self.phrase, swipe_right_count=1)   # sayaç var ama başarı sayacı 0 (kart öğreniliyor)
         self.assertEqual(self.client.post(self.undo_url, {'direction': 'right'}).status_code, 409)
 
     def test_invalid_direction_is_rejected(self):
@@ -169,7 +165,7 @@ class SwipeUndoTests(TestCase):
         self.client.post(self.swipe_url, {'direction': 'right'})
         self.client.force_login(User.objects.create_user('veli@example.com', PASSWORD))
         self.assertEqual(self.client.post(self.undo_url, {'direction': 'right'}).status_code, 404)
-        self.assertEqual(progress_of(self.phrase).status, PhraseProgress.Status.LEARNED)
+        self.assertEqual(progress_of(self.phrase).status, PhraseProgress.Status.REVIEWING)
 
     def test_swipe_then_undo_restores_queue_position(self):
         second = make_phrase(self.user, original_phrase='İkinci')
@@ -286,7 +282,7 @@ class RelearnTests(TestCase):
     def learn(self):
         set_progress(
             self.phrase, status=PhraseProgress.Status.LEARNED, swipe_left_count=2, swipe_right_count=3,
-            last_reviewed_at=timezone.now(),
+            review_streak=3, last_reviewed_at=timezone.now(),
         )
 
     def test_relearn_puts_learned_phrase_back_into_the_queue_and_keeps_history(self):
@@ -297,6 +293,7 @@ class RelearnTests(TestCase):
         self.assertRedirects(response, reverse('phrase_list'))
         progress = progress_of(self.phrase)
         self.assertEqual(progress.status, PhraseProgress.Status.LEARNING)
+        self.assertEqual(progress.review_streak, 0)   # 3 başarı baştan gerekir
         self.assertEqual((progress.swipe_left_count, progress.swipe_right_count), (2, 3))
         self.assertEqual([item.phrase_id for item in get_study_queue(self.user)], [self.phrase.pk])
 
@@ -309,6 +306,14 @@ class RelearnTests(TestCase):
         response = self.client.post(self.url)
         self.assertRedirects(response, reverse('phrase_list'))
         self.assertEqual(progress_of(self.phrase).status, PhraseProgress.Status.LEARNING)
+
+    def test_relearn_does_not_touch_a_phrase_that_is_still_in_review(self):
+        soon = timezone.now() + timedelta(hours=5)
+        set_progress(self.phrase, status=PhraseProgress.Status.REVIEWING, review_streak=2, next_review_at=soon)
+        self.client.post(self.url)
+        progress = progress_of(self.phrase)
+        self.assertEqual((progress.status, progress.review_streak), (PhraseProgress.Status.REVIEWING, 2))
+        self.assertEqual(progress.next_review_at, soon)
 
     def test_relearn_requires_post(self):
         self.learn()

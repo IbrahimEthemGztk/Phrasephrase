@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load phrase_extras %}
 
 {% block title %}Phrase'lerim · PhrasePhrase{% endblock %}
 
@@ -20,12 +21,18 @@
                 <span class="phrase-translation">{{ item.phrase.translation }}</span>
             </a>
             <div class="phrase-meta">
+                {% if item.status == 'reviewing' %}
+                {% with when=item.next_review_at|until_text %}
+                <span class="badge badge-reviewing">Tekrarda {{ item.review_streak }}/{{ review_target }} · {% if when == 'şimdi' %}zamanı geldi{% else %}{{ when }}{% endif %}</span>
+                {% endwith %}
+                {% else %}
                 <span class="badge badge-{{ item.status }}">{{ item.get_status_display }}</span>
+                {% endif %}
                 {% if item.status == 'learned' %}
                 <form method="post" action="{% url 'phrase_relearn' item.phrase.pk %}">
                     {% csrf_token %}
-                    <button type="submit" class="btn-link" title="Öğrenildi işaretini kaldır, kartlara geri al"
-                            aria-label="{{ item.phrase.original_phrase }} için öğrenildi işaretini geri al">↶ Geri al</button>
+                    <button type="submit" class="btn-link" title="Öğrenildi işaretini kaldır, baştan çalışmaya başla"
+                            aria-label="{{ item.phrase.original_phrase }} için öğrenildi işaretini geri al">{% include 'includes/icon.html' with name='undo' %}Geri al</button>
                 </form>
                 {% endif %}
             </div>

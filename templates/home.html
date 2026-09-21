@@ -20,9 +20,14 @@
 <section class="study" data-deck-root
          data-csrf="{{ csrf_token }}"
          data-login-url="{% url 'login' %}"
-         data-learned="{{ learned_count }}">
+         data-learned="{{ learned_count }}"
+         data-reviewing="{{ reviewing_count }}"
+         data-total="{{ total_count }}"
+         data-review-target="{{ review_target }}"
+         data-next-review="{% if next_review_at %}{{ next_review_at.isoformat }}{% endif %}">
     <p class="study-counter">
         <span>Kalan <strong data-remaining>{{ queue|length }}</strong></span>
+        <span data-reviewing-box{% if not reviewing_count %} hidden{% endif %}>Tekrarda <strong data-reviewing-count>{{ reviewing_count }}</strong></span>
         <span>Öğrenilen <strong data-learned-count>{{ learned_count }}</strong>/{{ total_count }}</span>
     </p>
 
@@ -30,24 +35,24 @@
 
     <div class="deck" data-deck{% if not queue %} hidden{% endif %}>
         {% for item in queue %}
-            {% include 'phrases/_study_card.html' with phrase=item.phrase %}
+            {% include 'phrases/_study_card.html' with phrase=item.phrase progress=item %}
         {% endfor %}
     </div>
 
     <div class="study-actions" data-actions{% if not queue %} hidden{% endif %}>
-        <button type="button" class="action action-left" data-action="left"><span aria-hidden="true">✕</span> Henüz değil</button>
-        <button type="button" class="action action-undo" data-action="undo" disabled>↶ Geri al</button>
-        <button type="button" class="action action-right" data-action="right"><span aria-hidden="true">✓</span> Ezberledim</button>
+        <button type="button" class="action action-left" data-action="left">{% include 'includes/icon.html' with name='x' %}<span>Henüz değil</span></button>
+        <button type="button" class="action action-undo" data-action="undo" disabled>{% include 'includes/icon.html' with name='undo' %}<span class="action-label">Geri al</span></button>
+        <button type="button" class="action action-right" data-action="right">{% include 'includes/icon.html' with name='check' %}<span>Ezberledim</span></button>
     </div>
 
     <p class="study-hint" data-hint{% if not queue %} hidden{% endif %}>
         Karta dokunarak sıradaki aşamayı aç (sesli parçalama, hikaye, en son anlam).
-        Sağa kaydır: ezberledim, sola kaydır: henüz değil.
+        Sağa kaydır: ezberledim (kart {{ review_interval }} sonra tekrar gelir, üst üste {{ review_target }} kez ezberleyince kalıcı öğrenilir), sola kaydır: henüz değil.
     </p>
 
     <section class="empty-state study-done" data-done{% if queue %} hidden{% endif %}>
-        <h2>Hepsini öğrendin! 🎉</h2>
-        <p>Şu an çalışılacak kart kalmadı. Yeni bir phrase ekleyerek devam edebilirsin.</p>
+        <h2 data-done-title>{% if reviewing_count %}Bugünlük bu kadar! 🎉{% else %}Hepsini öğrendin! 🎉{% endif %}</h2>
+        <p data-done-text>{% if reviewing_count %}Tekrardaki kartlar zamanı gelince burada yeniden çıkacak.{% else %}Şu an çalışılacak kart kalmadı. Yeni bir phrase ekleyerek devam edebilirsin.{% endif %}</p>
         <a class="btn btn-accent" href="{% url 'phrase_create' %}">+ Yeni phrase ekle</a>
     </section>
 
