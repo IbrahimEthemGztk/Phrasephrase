@@ -17,6 +17,13 @@ from .services import (
 )
 
 
+def _phrase_limit_error(user):
+    """Kullanıcı phrase üst sınırına ulaştıysa mesaj, yoksa None (kontrol ve ekleme arasındaki küçük yarış kabul edilir)."""
+    if user.phrases.count() >= settings.MAX_PHRASES_PER_USER:
+        return f'En fazla {settings.MAX_PHRASES_PER_USER} phrase ekleyebilirsin. Yenisini eklemek için birini silmelisin.'
+    return None
+
+
 def _get_own_phrase(request, pk):
     return get_object_or_404(Phrase, pk=pk, user=request.user)
 
@@ -70,12 +77,16 @@ def phrase_create(request):
 @login_required
 def phrase_create_manual(request):
     form = PhraseForm(request.POST) if request.method == 'POST' else PhraseForm()
-    if request.method == 'POST' and form.is_valid():
-        phrase = form.save(commit=False)
-        phrase.user = request.user
-        phrase.save()
-        messages.success(request, 'Phrase eklendi.')
-        return redirect('phrase_detail', pk=phrase.pk)
+    if request.method == 'POST':
+        limit_error = _phrase_limit_error(request.user)
+        if limit_error:
+            form.add_error(None, limit_error)
+        elif form.is_valid():
+            phrase = form.save(commit=False)
+            phrase.user = request.user
+            phrase.save()
+            messages.success(request, 'Phrase eklendi.')
+            return redirect('phrase_detail', pk=phrase.pk)
     return render(request, 'phrases/form.html', {'form': form, 'title': 'Yeni phrase'})
 
 
@@ -109,7 +120,7 @@ def _preview_form(result):
 def _known_phrases(user, current=''):
     """Kullanıcının zaten bildiği ifadeler (AI bunlardan farklı seçer). `current`: önizlemede gösterilen ifade."""
     known = list(user.phrases.values_list('original_phrase', flat=True)[:200])
-    current = ' '.join(current.split())
+    current = ' '.join(current.split())[:ai.MAX_PHRASE_LENGTH]   # istemci metni: AI istemine sınırsız girmesin
     return [current, *known] if current else known
 
 
@@ -121,8 +132,10 @@ def phrase_create_ai(request):
     if request.method == 'POST' and form.is_valid():
         if not ai.is_configured():
             form.add_error(None, ai.AINotConfigured().user_message)
-        elif ai.remaining_generations(request.user) <= 0:
-            form.add_error(None, 'Bugünlük AI üretim hakkın doldu. Yarın tekrar deneyebilir ya da manuel ekleyebilirsin.')
+        elif quota_error := ai.quota_error(request.user):
+            form.add_error(None, quota_error)
+        elif limit_error := _phrase_limit_error(request.user):
+            form.add_error(None, limit_error)
         else:
             try:
                 result = ai.generate_phrase(form.cleaned_data['original_phrase'])
@@ -149,8 +162,10 @@ def phrase_create_ai_auto(request):
         category = form.cleaned_data['category']
         if not ai.is_configured():
             form.add_error(None, ai.AINotConfigured().user_message)
-        elif ai.remaining_generations(request.user) <= 0:
-            form.add_error(None, 'Bugünlük AI üretim hakkın doldu. Yarın tekrar deneyebilir ya da manuel ekleyebilirsin.')
+        elif quota_error := ai.quota_error(request.user):
+            form.add_error(None, quota_error)
+        elif limit_error := _phrase_limit_error(request.user):
+            form.add_error(None, limit_error)
         else:
             # Önizlemeden "başka bir phrase üret" denirse gösterilen ifade de (henüz kaydedilmediği için) hariç tutulur.
             avoid = _known_phrases(request.user, request.POST.get('original_phrase', ''))
@@ -176,7 +191,10 @@ def phrase_create_ai_save(request):
     if request.method != 'POST':
         return redirect('phrase_create_ai')
     form = PhraseForm(request.POST)
-    if form.is_valid():
+    limit_error = _phrase_limit_error(request.user)
+    if limit_error:
+        form.add_error(None, limit_error)
+    elif form.is_valid():
         phrase = form.save(commit=False)
         phrase.user = request.user
         phrase.source = Phrase.Source.AI_GENERATED

@@ -212,7 +212,9 @@ def build_input(words):
 
 def build_auto_input(category, avoid, theme):
     """Tamamen AI modunun girdisi: ifade türü, tema ipucu ve kullanıcının zaten bildiği ifadeler."""
-    known = list(dict.fromkeys([*EXAMPLE_PHRASES, *avoid]))[:AUTO_AVOID_IN_PROMPT + len(EXAMPLE_PHRASES)]
+    # Her ifade en fazla bir ifade uzunluğunda yazılır: istem boyutu (token maliyeti) sınırlı kalır.
+    known = list(dict.fromkeys(item[:MAX_PHRASE_LENGTH] for item in [*EXAMPLE_PHRASES, *avoid]))
+    known = known[:AUTO_AVOID_IN_PROMPT + len(EXAMPLE_PHRASES)]
     lines = [
         f'İstenen tür: {CATEGORIES[category][1]}',
         f'Tema ipucu: {theme}',
@@ -473,13 +475,37 @@ def generate_auto_phrase(category, avoid=()):
 
 # ---- Günlük limit ----
 
+USER_LIMIT_MESSAGE = 'Bugünlük AI üretim hakkın doldu. Yarın tekrar deneyebilir ya da manuel ekleyebilirsin.'
+GLOBAL_LIMIT_MESSAGE = 'AI özelliği bugün çok yoğun kullanıldı ve günlük sınıra ulaştı. Yarın tekrar deneyebilir ya da manuel ekleyebilirsin.'
+
+
+def _today_start():
+    return timezone.localtime().replace(hour=0, minute=0, second=0, microsecond=0)
+
+
 def generations_today(user):
-    start = timezone.localtime().replace(hour=0, minute=0, second=0, microsecond=0)
-    return AIGeneration.objects.filter(user=user, created_at__gte=start).count()
+    return AIGeneration.objects.filter(user=user, created_at__gte=_today_start()).count()
+
+
+def generations_today_total():
+    """Bugün tüm kullanıcıların yaptığı toplam üretim sayısı."""
+    return AIGeneration.objects.filter(created_at__gte=_today_start()).count()
 
 
 def remaining_generations(user):
-    return max(settings.AI_DAILY_LIMIT - generations_today(user), 0)
+    """Kullanıcının bugün kalan hakkı: kendi günlük sınırı ile genel günlük sınırdan küçük olanı."""
+    own = settings.AI_DAILY_LIMIT - generations_today(user)
+    overall = settings.AI_GLOBAL_DAILY_LIMIT - generations_today_total()
+    return max(min(own, overall), 0)
+
+
+def quota_error(user):
+    """Üretim hakkı dolmuşsa kullanıcıya gösterilecek mesaj, yoksa None. Genel sınır önce bakılır."""
+    if generations_today_total() >= settings.AI_GLOBAL_DAILY_LIMIT:
+        return GLOBAL_LIMIT_MESSAGE
+    if generations_today(user) >= settings.AI_DAILY_LIMIT:
+        return USER_LIMIT_MESSAGE
+    return None
 
 
 def record_generation(user, result):

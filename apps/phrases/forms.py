@@ -3,7 +3,7 @@ from itertools import zip_longest
 from django import forms
 from django.core.exceptions import ValidationError
 
-from .ai import CATEGORY_CHOICES
+from .ai import CATEGORY_CHOICES, MAX_STORY_LENGTH
 from .models import Phrase
 from .validators import MAX_TEXT_LENGTH, MAX_WORDS, build_word_breakdown, validate_word_breakdown
 
@@ -12,21 +12,26 @@ class PhraseForm(forms.ModelForm):
     """Phrase formu. Kelime/ses karşılığı satırları `original_word` ve `sound_hint` alanlarının
     tekrarlanan girdileri olarak gelir ve sıra numarası sunucuda üretilir."""
 
+    # Modelde TextField olduğu için sınır yok; burada AI çıktısıyla aynı üst sınır uygulanır (veritabanını şişirmesin).
+    association_story = forms.CharField(
+        label='Çağrışım hikayesi',
+        max_length=MAX_STORY_LENGTH,
+        widget=forms.Textarea(attrs={
+            'rows': 5,
+            'placeholder': 'Ses karşılıklarını birbirine bağlayan kısa, akılda kalıcı bir hikaye yaz…',
+        }),
+    )
+
     class Meta:
         model = Phrase
         fields = ('original_phrase', 'translation', 'association_story')
         labels = {
             'original_phrase': 'İngilizce cümle / deyim',
             'translation': 'Türkçe anlamı',
-            'association_story': 'Çağrışım hikayesi',
         }
         widgets = {
             'original_phrase': forms.TextInput(attrs={'placeholder': 'Break a leg', 'autofocus': True}),
             'translation': forms.TextInput(attrs={'placeholder': 'Bol şans'}),
-            'association_story': forms.Textarea(attrs={
-                'rows': 5,
-                'placeholder': 'Ses karşılıklarını birbirine bağlayan kısa, akılda kalıcı bir hikaye yaz…',
-            }),
         }
 
     def __init__(self, *args, initial_breakdown=None, **kwargs):

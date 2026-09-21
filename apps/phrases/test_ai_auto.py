@@ -114,6 +114,11 @@ class BuildAutoInputTests(SimpleTestCase):
         listed = [line for line in text.splitlines() if line.startswith('- ')]
         self.assertEqual(len(listed), ai.AUTO_AVOID_IN_PROMPT + len(ai.EXAMPLE_PHRASES))
 
+    def test_each_known_phrase_is_cut_to_the_phrase_length_limit(self):
+        text = ai.build_auto_input('random', ['x' * 100_000], 'yemek')
+        longest = max(len(line) for line in text.splitlines())
+        self.assertLessEqual(longest, len('- ') + ai.MAX_PHRASE_LENGTH)
+
     def test_every_category_has_a_prompt_description(self):
         for key, label in ai.CATEGORY_CHOICES:
             self.assertIn('İstenen tür:', ai.build_auto_input(key, [], 'zaman'))
@@ -267,6 +272,12 @@ class AutoViewTests(TestCase):
         self.assertEqual(category, 'idiom')
         self.assertEqual(avoid, ['Shown phrase', 'Under the weather', 'Break a leg'])   # gösterilen + kayıtlılar (yeni önce)
         self.assertNotIn('Başkasının ifadesi', avoid)
+
+    def test_an_oversized_shown_phrase_is_cut_before_it_is_used_as_an_avoid_entry(self):
+        with self.generate_patch(return_value=fake_auto()) as generate:
+            self.client.post(self.url, {'category': 'idiom', 'original_phrase': 'word ' * 200_000})
+        (_, avoid), _ = generate.call_args
+        self.assertLessEqual(max(len(item) for item in avoid), ai.MAX_PHRASE_LENGTH)
 
     def test_invalid_category_never_reaches_the_model(self):
         with self.generate_patch() as generate:

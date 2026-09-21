@@ -34,7 +34,13 @@ if not SECRET_KEY:
         raise RuntimeError('DJANGO_SECRET_KEY ortam değişkeni tanımlı olmalı.')
 
 ALLOWED_HOSTS = env_list('DJANGO_ALLOWED_HOSTS', 'localhost,127.0.0.1,.vercel.app')
-CSRF_TRUSTED_ORIGINS = env_list('DJANGO_CSRF_TRUSTED_ORIGINS', 'https://*.vercel.app')
+# Varsayılan boş: TLS'i Vercel sonlandırır ve SECURE_PROXY_SSL_HEADER sayesinde Django isteğin https olduğunu bilir,
+# bu yüzden kendi alan adının Origin'i zaten kabul edilir. Yalnızca farklı bir origin gerekiyorsa doldur.
+CSRF_TRUSTED_ORIGINS = env_list('DJANGO_CSRF_TRUSTED_ORIGINS', '')
+
+if DEBUG and os.environ.get('VERCEL'):
+    # Vercel her ortamda VERCEL=1 tanımlar. DEBUG açık bir üretim sitesi hata sayfalarında kod ve ayarları gösterir.
+    raise RuntimeError('DJANGO_DEBUG Vercel üzerinde açık olamaz. Ortam değişkenini kaldır ya da False yap.')
 
 
 # Application definition
@@ -104,6 +110,9 @@ elif DATABASE_URL:
     }
     # Transaction pooler (pgbouncer) sunucu tarafı cursor'ları desteklemez.
     DATABASES['default']['DISABLE_SERVER_SIDE_CURSORS'] = True
+    # Transaction pooler hazırlanmış (prepared) ifadeleri desteklemez; psycopg 3 aynı sorgu 5 kez çalışınca
+    # otomatik hazırladığı için kapatılır. Session pooler'da da zararsızdır.
+    DATABASES['default'].setdefault('OPTIONS', {})['prepare_threshold'] = None
 elif DEBUG:
     DATABASES = {
         'default': {
@@ -121,6 +130,18 @@ AUTH_USER_MODEL = 'users.User'
 LOGIN_URL = 'login'
 LOGIN_REDIRECT_URL = 'home'
 LOGOUT_REDIRECT_URL = 'login'
+
+
+# Üretim güvenliği (DEBUG kapalıyken): çerezler yalnızca HTTPS ile gider, HTTP istekleri HTTPS'e yönlendirilir.
+# Vercel TLS'i kendi sonlandırır ve isteği X-Forwarded-Proto ile iletir; Django'ya buna güvenmesini söyleriz.
+if not DEBUG and not RUNNING_TESTS:
+    SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+    # Yönlendirme döngüsü çıkarsa (proxy başlığı iletilmiyorsa) DJANGO_SSL_REDIRECT=false ile kapatılabilir.
+    SECURE_SSL_REDIRECT = env_bool('DJANGO_SSL_REDIRECT', True)
+    # HSTS tarayıcıya "bu siteye yalnızca HTTPS ile bağlan" der; süre dolana kadar geri alınamaz (varsayılan 30 gün).
+    SECURE_HSTS_SECONDS = int(os.environ.get('DJANGO_HSTS_SECONDS', '2592000'))
 
 
 # Password validation
@@ -178,6 +199,11 @@ AI_MODEL = os.environ.get('AI_MODEL', 'gemini-3.5-flash-lite').strip()
 AI_THINKING_LEVEL = os.environ.get('AI_THINKING_LEVEL', 'low').strip()
 AI_TIMEOUT_SECONDS = float(os.environ.get('AI_TIMEOUT_SECONDS', '20'))   # tek bir API denemesi için
 AI_DAILY_LIMIT = int(os.environ.get('AI_DAILY_LIMIT', '20'))
+# Tüm kullanıcıların toplam günlük AI üretimi: sahte hesaplarla Gemini kotasının tüketilmesini sınırlar.
+AI_GLOBAL_DAILY_LIMIT = int(os.environ.get('AI_GLOBAL_DAILY_LIMIT', '300'))
+
+# Kullanıcı başına phrase sayısı üst sınırı (veritabanının şişirilmesini engeller).
+MAX_PHRASES_PER_USER = int(os.environ.get('MAX_PHRASES_PER_USER', '500'))
 AI_MAX_OUTPUT_TOKENS = 4096
 if RUNNING_TESTS:
     # .env'de gerçek anahtar olsa bile testler asla gerçek API'ye gitmesin (gerekirse override_settings kullanılır).
