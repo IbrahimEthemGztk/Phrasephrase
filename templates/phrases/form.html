@@ -5,14 +5,21 @@
 
 {% block content %}
 <header class="topbar">
-    <a class="back-link" href="{% if phrase %}{% url 'phrase_detail' phrase.pk %}{% else %}{% url 'home' %}{% endif %}">← Geri</a>
+    <a class="back-link" href="{% if phrase %}{% url 'phrase_detail' phrase.pk %}{% elif back_url %}{{ back_url }}{% else %}{% url 'phrase_create' %}{% endif %}">← Geri</a>
     <span class="brand">PhrasePhrase</span>
 </header>
 
 <section class="card">
     <h2 class="card-title">{{ title }}</h2>
 
-    <form method="post" novalidate data-phrase-form>
+    {% if ai_mode %}
+    <p class="ai-banner">
+        ✨ Bu içerik AI tarafından üretildi. Kontrol edip düzenleyebilirsin; beğenmezsen yeniden üretebilirsin.
+        <span class="ai-remaining">Bugün kalan hak: {{ remaining }}</span>
+    </p>
+    {% endif %}
+
+    <form method="post" novalidate data-phrase-form{% if form_action %} action="{{ form_action }}"{% endif %}>
         {% csrf_token %}
         {% include 'includes/field.html' with field=form.original_phrase %}
         {% include 'includes/field.html' with field=form.translation %}
@@ -40,10 +47,17 @@
         {% include 'includes/field.html' with field=form.association_story %}
 
         <button type="submit" class="btn btn-primary">Kaydet</button>
+
+        {% if ai_mode %}
+        {% if category %}<input type="hidden" name="category" value="{{ category }}">{% endif %}
+        <button type="submit" class="btn btn-secondary btn-block" formaction="{{ regenerate_url }}" formnovalidate data-ai-regenerate>{{ regenerate_label }}</button>
+        <p class="ai-status" data-ai-status role="status" hidden>AI hazırlıyor… Bu 5–20 saniye sürebilir.</p>
+        {% endif %}
     </form>
 </section>
 {% endblock %}
 
 {% block extra_js %}
 <script src="{% static 'js/phrase-form.js' %}"></script>
+{% if ai_mode %}<script src="{% static 'js/ai-form.js' %}"></script>{% endif %}
 {% endblock %}

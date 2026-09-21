@@ -5,10 +5,10 @@
     <span class="stamp stamp-right" aria-hidden="true">Ezberledim</span>
     <span class="stamp stamp-left" aria-hidden="true">Henüz değil</span>
 
+    {# Aşamalar: cümle -> sesli parçalama -> hikaye -> anlam. Anlam en sona kalır (bkz. cards.css). #}
     <section class="card-part part-abstract">
         <h3 class="section-label">Cümle</h3>
         <p class="detail-original">{{ phrase.original_phrase }}</p>
-        <p class="detail-translation">{{ phrase.translation }}</p>
     </section>
 
     <section class="card-part part-breakdown">
@@ -19,6 +19,11 @@
     <section class="card-part part-story">
         <h3 class="section-label">Çağrışım hikayesi</h3>
         <p class="detail-story">{{ phrase.association_story|linebreaksbr }}</p>
+    </section>
+
+    <section class="card-part part-meaning">
+        <h3 class="section-label">Anlamı</h3>
+        <p class="detail-meaning">{{ phrase.translation }}</p>
     </section>
 
     <button type="button" class="reveal-btn" data-reveal>Sesli parçalamayı göster</button>

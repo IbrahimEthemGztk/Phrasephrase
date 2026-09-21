@@ -1,13 +1,16 @@
 from functools import wraps
 
+from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.db.models import Count, Q
 from django.http import Http404, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
 from django.views.decorators.http import require_POST
 
-from .forms import PhraseForm
+from . import ai
+from .forms import AIAutoForm, AIPhraseInputForm, PhraseForm
 from .models import Phrase, PhraseProgress
 from .services import DIRECTIONS, get_study_queue, record_swipe, restudy, undo_swipe
 
@@ -47,6 +50,12 @@ def phrase_list(request):
 
 @login_required
 def phrase_create(request):
+    """Ekleme yöntemi seçimi: manuel ya da AI ile üretim."""
+    return render(request, 'phrases/create_choice.html', {'ai_enabled': ai.is_configured()})
+
+
+@login_required
+def phrase_create_manual(request):
     form = PhraseForm(request.POST) if request.method == 'POST' else PhraseForm()
     if request.method == 'POST' and form.is_valid():
         phrase = form.save(commit=False)
@@ -55,6 +64,114 @@ def phrase_create(request):
         messages.success(request, 'Phrase eklendi.')
         return redirect('phrase_detail', pk=phrase.pk)
     return render(request, 'phrases/form.html', {'form': form, 'title': 'Yeni phrase'})
+
+
+def _ai_preview(request, form, category=None):
+    """AI önizlemesi. `category` doluysa tamamen AI modudur: "yeniden üret" yeni bir ifade seçer."""
+    auto = category in ai.CATEGORIES
+    return render(request, 'phrases/form.html', {
+        'form': form,
+        'title': 'AI önizleme',
+        'ai_mode': True,
+        'form_action': reverse('phrase_create_ai_save'),
+        'remaining': ai.remaining_generations(request.user),
+        'category': category if auto else None,
+        'back_url': reverse('phrase_create_ai_auto' if auto else 'phrase_create_ai'),
+        'regenerate_url': reverse('phrase_create_ai_auto' if auto else 'phrase_create_ai'),
+        'regenerate_label': '↻ Başka bir phrase üret' if auto else '↻ Yeniden üret',
+    })
+
+
+def _preview_form(result):
+    return PhraseForm(
+        initial={
+            'original_phrase': result.phrase,
+            'translation': result.translation,
+            'association_story': result.association_story,
+        },
+        initial_breakdown=result.word_breakdown,
+    )
+
+
+def _known_phrases(user, current=''):
+    """Kullanıcının zaten bildiği ifadeler (AI bunlardan farklı seçer). `current`: önizlemede gösterilen ifade."""
+    known = list(user.phrases.values_list('original_phrase', flat=True)[:200])
+    current = ' '.join(current.split())
+    return [current, *known] if current else known
+
+
+@login_required
+def phrase_create_ai(request):
+    """İngilizce ifadeyi alır, AI ile üretir ve düzenlenebilir bir önizleme gösterir."""
+    form = AIPhraseInputForm(request.POST) if request.method == 'POST' else AIPhraseInputForm()
+
+    if request.method == 'POST' and form.is_valid():
+        if not ai.is_configured():
+            form.add_error(None, ai.AINotConfigured().user_message)
+        elif ai.remaining_generations(request.user) <= 0:
+            form.add_error(None, 'Bugünlük AI üretim hakkın doldu. Yarın tekrar deneyebilir ya da manuel ekleyebilirsin.')
+        else:
+            try:
+                result = ai.generate_phrase(form.cleaned_data['original_phrase'])
+            except ai.AIError as error:
+                form.add_error(None, error.user_message)
+            else:
+                ai.record_generation(request.user, result)
+                return _ai_preview(request, _preview_form(result))
+
+    return render(request, 'phrases/ai_input.html', {
+        'form': form,
+        'ai_enabled': ai.is_configured(),
+        'remaining': ai.remaining_generations(request.user),
+        'daily_limit': settings.AI_DAILY_LIMIT,
+    })
+
+
+@login_required
+def phrase_create_ai_auto(request):
+    """Tamamen AI: ifadeyi de AI seçer (kullanıcının zaten bildikleri hariç) ve düzenlenebilir önizleme gösterir."""
+    form = AIAutoForm(request.POST) if request.method == 'POST' else AIAutoForm()
+
+    if request.method == 'POST' and form.is_valid():
+        category = form.cleaned_data['category']
+        if not ai.is_configured():
+            form.add_error(None, ai.AINotConfigured().user_message)
+        elif ai.remaining_generations(request.user) <= 0:
+            form.add_error(None, 'Bugünlük AI üretim hakkın doldu. Yarın tekrar deneyebilir ya da manuel ekleyebilirsin.')
+        else:
+            # Önizlemeden "başka bir phrase üret" denirse gösterilen ifade de (henüz kaydedilmediği için) hariç tutulur.
+            avoid = _known_phrases(request.user, request.POST.get('original_phrase', ''))
+            try:
+                result = ai.generate_auto_phrase(category, avoid)
+            except ai.AIError as error:
+                form.add_error(None, error.user_message)
+            else:
+                ai.record_generation(request.user, result)
+                return _ai_preview(request, _preview_form(result), category=category)
+
+    return render(request, 'phrases/ai_auto.html', {
+        'form': form,
+        'ai_enabled': ai.is_configured(),
+        'remaining': ai.remaining_generations(request.user),
+        'daily_limit': settings.AI_DAILY_LIMIT,
+    })
+
+
+@login_required
+def phrase_create_ai_save(request):
+    """AI önizlemesindeki (kullanıcının düzenlemiş olabileceği) içeriği kaydeder."""
+    if request.method != 'POST':
+        return redirect('phrase_create_ai')
+    form = PhraseForm(request.POST)
+    if form.is_valid():
+        phrase = form.save(commit=False)
+        phrase.user = request.user
+        phrase.source = Phrase.Source.AI_GENERATED
+        phrase.save()
+        messages.success(request, 'AI ile üretilen phrase eklendi.')
+        return redirect('phrase_detail', pk=phrase.pk)
+    # Hata varsa önizleme yeniden gösterilir; tamamen AI modundan geldiyse (gizli `category` alanı) o mod korunur.
+    return _ai_preview(request, form, category=request.POST.get('category'))
 
 
 @login_required

@@ -51,3 +51,21 @@ class PhraseProgress(models.Model):
 
     def __str__(self):
         return f'{self.user} · {self.phrase} · {self.status}'
+
+
+class AIGeneration(models.Model):
+    """Başarılı her AI üretiminin kaydı: günlük limit ve kullanım (token) takibi için."""
+
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='ai_generations')
+    prompt_text = models.CharField(max_length=300)
+    model_name = models.CharField(max_length=100)
+    input_tokens = models.PositiveIntegerField(default=0)
+    output_tokens = models.PositiveIntegerField(default=0)
+    thought_tokens = models.PositiveIntegerField(default=0)
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f'{self.user} · {self.prompt_text}'

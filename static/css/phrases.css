@@ -29,6 +29,16 @@
     resize: vertical;
 }
 .field textarea:focus { outline: none; border-color: var(--purple); }
+.field select {
+    width: 100%;
+    padding: .8rem 1rem;
+    font: inherit;
+    border: 2px solid #e5e2da;
+    border-radius: 14px;
+    background: var(--bg);
+    color: var(--text);
+}
+.field select:focus { outline: none; border-color: var(--purple); }
 
 /* --- Bildirim mesajları --- */
 .messages { list-style: none; margin: 0 0 1rem; padding: 0; }
@@ -122,6 +132,30 @@
 .bd-remove:disabled { opacity: .35; cursor: not-allowed; }
 
 .confirm-delete .detail-original { margin-bottom: .5rem; }
+
+/* --- Ekleme yöntemi seçimi ve AI üretim --- */
+.choice-grid { display: grid; gap: .9rem; }
+.choice-card {
+    display: block;
+    padding: 1.1rem 1.25rem;
+    border: 2px solid #ece7da;
+    border-radius: 18px;
+    background: var(--bg);
+    color: inherit;
+    text-decoration: none;
+}
+.choice-card:hover { border-color: var(--purple); }
+.choice-ai { border-color: var(--orange); background: #fff7ed; }
+.choice-card.is-disabled { opacity: .55; cursor: not-allowed; }
+.choice-card.is-disabled:hover { border-color: #ece7da; }
+.choice-title { display: block; font-size: 1.1rem; margin-bottom: .25rem; }
+.choice-text { display: block; color: #6b6b7b; font-size: .9rem; }
+
+.ai-banner { margin: 0 0 1rem; padding: .75rem 1rem; border-radius: 14px; background: #fff7ed; color: #9a3412; font-size: .9rem; }
+.ai-remaining { display: block; margin-top: .25rem; font-weight: 800; }
+.ai-status { margin: .75rem 0 0; text-align: center; font-weight: 600; color: var(--purple); }
+.ai-quota { margin-top: 1rem; text-align: center; }
+.btn-block { display: block; width: 100%; margin-top: .75rem; }
 
 /* --- Genel yardımcılar --- */
 [hidden] { display: none !important; }

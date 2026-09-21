@@ -3,8 +3,9 @@ from itertools import zip_longest
 from django import forms
 from django.core.exceptions import ValidationError
 
+from .ai import CATEGORY_CHOICES
 from .models import Phrase
-from .validators import MAX_TEXT_LENGTH, build_word_breakdown, validate_word_breakdown
+from .validators import MAX_TEXT_LENGTH, MAX_WORDS, build_word_breakdown, validate_word_breakdown
 
 
 class PhraseForm(forms.ModelForm):
@@ -28,7 +29,7 @@ class PhraseForm(forms.ModelForm):
             }),
         }
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, initial_breakdown=None, **kwargs):
         super().__init__(*args, **kwargs)
         if self.is_bound:
             rows = zip_longest(self.data.getlist('original_word'), self.data.getlist('sound_hint'), fillvalue='')
@@ -37,6 +38,12 @@ class PhraseForm(forms.ModelForm):
             self.rows = [
                 {'original_word': item['original_word'], 'sound_hint': item['sound_hint']}
                 for item in self.instance.word_breakdown
+            ]
+        elif initial_breakdown:
+            # AI önizlemesi: henüz kaydedilmemiş, önceden doldurulmuş kelime satırları
+            self.rows = [
+                {'original_word': item['original_word'], 'sound_hint': item['sound_hint']}
+                for item in initial_breakdown
             ]
         else:
             self.rows = []
@@ -56,3 +63,29 @@ class PhraseForm(forms.ModelForm):
         else:
             self.instance.word_breakdown = breakdown
         return cleaned_data
+
+
+class AIPhraseInputForm(forms.Form):
+    """AI ile üretim için tek alanlı giriş: yalnızca İngilizce ifade."""
+
+    original_phrase = forms.CharField(
+        label='İngilizce cümle / deyim',
+        max_length=Phrase._meta.get_field('original_phrase').max_length,
+        widget=forms.TextInput(attrs={'placeholder': 'Break a leg', 'autofocus': True, 'autocomplete': 'off'}),
+    )
+
+    def clean_original_phrase(self):
+        value = ' '.join(self.cleaned_data['original_phrase'].split())
+        if len(value.split()) > MAX_WORDS:
+            raise forms.ValidationError(f'En fazla {MAX_WORDS} kelime girebilirsin.')
+        return value
+
+
+class AIAutoForm(forms.Form):
+    """Tamamen AI ile üretim: yalnızca istenen ifade türü seçilir, ifadeyi AI seçer."""
+
+    category = forms.ChoiceField(
+        label='Ne tür bir ifade?',
+        choices=CATEGORY_CHOICES,
+        initial='random',
+    )

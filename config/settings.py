@@ -162,3 +162,18 @@ if RUNNING_TESTS:
 # Default primary key field type
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+
+# AI ile phrase üretimi (Google Gemini)
+
+GEMINI_API_KEY = os.environ.get('GEMINI_API_KEY', '').strip()
+# Varsayılan: ücretsiz katmanda günlük kotası geniş, hızlı model. En iyi kalite için AI_MODEL=gemini-3.8-flash
+# (ücretsiz katmanda günde ~20 istek; faturalandırma açılınca kota büyür, üretim başına ~0,13 sent).
+AI_MODEL = os.environ.get('AI_MODEL', 'gemini-3.5-flash-lite').strip()
+AI_THINKING_LEVEL = os.environ.get('AI_THINKING_LEVEL', 'low').strip()
+AI_TIMEOUT_SECONDS = float(os.environ.get('AI_TIMEOUT_SECONDS', '20'))   # tek bir API denemesi için
+AI_DAILY_LIMIT = int(os.environ.get('AI_DAILY_LIMIT', '20'))
+AI_MAX_OUTPUT_TOKENS = 4096
+if RUNNING_TESTS:
+    # .env'de gerçek anahtar olsa bile testler asla gerçek API'ye gitmesin (gerekirse override_settings kullanılır).
+    GEMINI_API_KEY = ''

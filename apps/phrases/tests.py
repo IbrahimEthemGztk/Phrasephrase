@@ -116,7 +116,7 @@ class PhraseCreateTests(TestCase):
     def setUp(self):
         self.user = User.objects.create_user('ali@example.com', PASSWORD)
         self.client.force_login(self.user)
-        self.url = reverse('phrase_create')
+        self.url = reverse('phrase_create_manual')
 
     def test_create_saves_breakdown_in_row_order(self):
         response = self.client.post(self.url, form_data())

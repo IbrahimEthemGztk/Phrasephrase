@@ -29,7 +29,11 @@
     const TAP_TIME = 400;        // ms
     const REINSERT_MIN = 3;      // sola kaydırılan kart 3-5 kart sonrasına eklenir
     const REINSERT_MAX = 5;
-    const REVEAL_LABELS = { 1: 'Sesli parçalamayı göster', 2: 'Hikayeyi göster' };
+    // Aşamalar: 1 = cümle, 2 = + sesli parçalama, 3 = + hikaye, 4 = + anlam.
+    // Amaç hikayeyi değil cümlenin anlamını ezberlemek olduğu için anlam en sona kalır.
+    const LAST_STAGE = 4;
+    const REVEAL_LABELS = { 1: 'Sesli parçalamayı göster', 2: 'Hikayeyi göster', 3: 'Anlamı göster' };
+    const STAGE_ANNOUNCEMENTS = { 2: 'Sesli parçalama gösterildi.', 3: 'Çağrışım hikayesi gösterildi.', 4: 'Anlam gösterildi.' };
     const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
 
     let learned = Number(root.dataset.learned) || 0;
@@ -45,8 +49,8 @@
     function setStage(card, stage) {
         card.dataset.stage = stage;
         const button = card.querySelector('[data-reveal]');
-        button.hidden = stage >= 3;
-        if (stage < 3) button.textContent = REVEAL_LABELS[stage];
+        button.hidden = stage >= LAST_STAGE;
+        if (stage < LAST_STAGE) button.textContent = REVEAL_LABELS[stage];
     }
 
     function announce(text) {
@@ -255,9 +259,9 @@
         const card = getCards()[0];
         if (!card) return;
         const stage = Number(card.dataset.stage);
-        if (stage >= 3) return;
+        if (stage >= LAST_STAGE) return;
         setStage(card, stage + 1);
-        announce(stage === 1 ? 'Sesli parçalama gösterildi.' : 'Çağrışım hikayesi gösterildi.');
+        announce(STAGE_ANNOUNCEMENTS[stage + 1]);
     }
 
     // ---- Sürükleme (fare + dokunma) ----

@@ -49,10 +49,15 @@
 .stamp-right { left: 1rem; color: var(--green); transform: rotate(-12deg); opacity: var(--stamp-right, 0); }
 .stamp-left { right: 1rem; color: var(--orange); transform: rotate(12deg); opacity: var(--stamp-left, 0); }
 
-/* Aşamalı gösterim: 1 = cümle, 2 = + sesli parçalama, 3 = + hikaye */
+/* Aşamalı gösterim: 1 = cümle, 2 = + sesli parçalama, 3 = + hikaye, 4 = + anlam (en sona kalır) */
 .study-card[data-stage="1"] .part-breakdown,
 .study-card[data-stage="1"] .part-story,
-.study-card[data-stage="2"] .part-story { display: none; }
+.study-card[data-stage="1"] .part-meaning,
+.study-card[data-stage="2"] .part-story,
+.study-card[data-stage="2"] .part-meaning,
+.study-card[data-stage="3"] .part-meaning { display: none; }
+
+.detail-meaning { margin: 0; font-size: 1.25rem; font-weight: 800; color: var(--purple); }
 
 .card-part { animation: part-in .3s ease; }
 @keyframes part-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }

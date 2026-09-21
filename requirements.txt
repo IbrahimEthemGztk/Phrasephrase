@@ -3,3 +3,4 @@ psycopg[binary]>=3.2
 dj-database-url>=2.3
 python-dotenv>=1.0
 whitenoise>=6.9
+google-genai>=2.24,<3

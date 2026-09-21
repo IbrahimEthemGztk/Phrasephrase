@@ -199,6 +199,26 @@ class CardsPageTests(TestCase):
         self.assertContains(response, reverse('phrase_swipe', args=[second.pk]))
         self.assertContains(response, reverse('phrase_swipe_undo', args=[second.pk]))
 
+    def test_meaning_is_its_own_last_stage_and_not_shown_with_the_phrase(self):
+        make_phrase(
+            self.user, original_phrase='Birinci cümle', translation='Gizli anlam', association_story='Birinci hikaye',
+        )
+        response = self.client.get(reverse('home'))
+        content = response.content.decode()
+        card = content[content.index('class="study-card"'):]
+
+        parts = [card.index(name) for name in ('part-abstract', 'part-breakdown', 'part-story', 'part-meaning')]
+        self.assertEqual(parts, sorted(parts))   # cümle -> sesli parçalama -> hikaye -> anlam
+        abstract = card[card.index('part-abstract'):card.index('part-breakdown')]
+        self.assertIn('Birinci cümle', abstract)
+        self.assertNotIn('Gizli anlam', abstract)   # ilk aşamada anlam görünmez
+        self.assertLess(card.index('Birinci hikaye'), card.index('Gizli anlam'))   # anlam hikayeden sonra
+        self.assertContains(response, 'Gizli anlam', count=1)
+
+    def test_detail_page_still_shows_the_meaning_together_with_the_phrase(self):
+        phrase = make_phrase(self.user, translation='Görünür anlam')
+        self.assertContains(self.client.get(reverse('phrase_detail', args=[phrase.pk])), 'Görünür anlam')
+
     def test_learned_and_foreign_cards_are_not_rendered(self):
         learned = make_phrase(self.user, original_phrase='Öğrenilmiş cümle')
         make_phrase(self.user, original_phrase='Çalışılacak cümle')

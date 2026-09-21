@@ -1,0 +1,38 @@
+{% extends 'base.html' %}
+
+{% block title %}Phrase ekle · PhrasePhrase{% endblock %}
+
+{% block content %}
+{% include 'includes/topbar.html' with active='add' %}
+
+<section class="card">
+    <h2 class="card-title">Yeni phrase nasıl eklensin?</h2>
+
+    <div class="choice-grid">
+        <a class="choice-card" href="{% url 'phrase_create_manual' %}">
+            <strong class="choice-title">Manuel</strong>
+            <span class="choice-text">Cümleyi, kelime kelime ses karşılıklarını ve hikayeyi kendin yazarsın.</span>
+        </a>
+
+        {% if ai_enabled %}
+        <a class="choice-card choice-ai" href="{% url 'phrase_create_ai' %}">
+            <strong class="choice-title">✨ AI ile hikaye üret</strong>
+            <span class="choice-text">Sen İngilizce cümleyi yaz. Ses karşılıklarını ve hikayeyi AI hazırlasın, sonra sen düzenle.</span>
+        </a>
+        <a class="choice-card choice-ai" href="{% url 'phrase_create_ai_auto' %}">
+            <strong class="choice-title">🎲 Tamamen AI ile üret</strong>
+            <span class="choice-text">Cümleyi de AI seçsin. İfade, anlam, ses karşılıkları ve hikayenin hepsini AI hazırlasın.</span>
+        </a>
+        {% else %}
+        <div class="choice-card is-disabled" aria-disabled="true">
+            <strong class="choice-title">✨ AI ile hikaye üret</strong>
+            <span class="choice-text">AI özelliği şu an yapılandırılmamış.</span>
+        </div>
+        <div class="choice-card is-disabled" aria-disabled="true">
+            <strong class="choice-title">🎲 Tamamen AI ile üret</strong>
+            <span class="choice-text">AI özelliği şu an yapılandırılmamış.</span>
+        </div>
+        {% endif %}
+    </div>
+</section>
+{% endblock %}
