@@ -6,10 +6,12 @@ from django.contrib.auth.decorators import login_required
 from django.http import Http404, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
+from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.decorators.http import require_POST
 
 from . import ai
 from .forms import AIAutoForm, AIPhraseInputForm, PhraseForm
+from .language_state import get_active_language, set_active_language
 from .models import Phrase, PhraseProgress
 from .services import (
     DIRECTIONS, LEFT, REVIEW_TARGET, RIGHT, get_progress_summary, get_source_counts, get_study_queue, record_swipe,
@@ -28,6 +30,21 @@ def _get_own_phrase(request, pk):
     return get_object_or_404(Phrase, pk=pk, user=request.user)
 
 
+@login_required
+@require_POST
+def set_language(request, code):
+    """Kartlar/Phrase'lerim/İstatistik'te gösterilen aktif hedef dili değiştirir (oturumda tutulur)."""
+    try:
+        set_active_language(request, code)
+    except ValueError:
+        raise Http404
+    next_url = request.POST.get('next')
+    # `next` bir gizli form alanı olarak biz gönderiyoruz ama yine de dışarıdan gelen bir yönlendirme gibi doğrulanır.
+    if next_url and url_has_allowed_host_and_scheme(next_url, allowed_hosts={request.get_host()}, require_https=request.is_secure()):
+        return redirect(next_url)
+    return redirect('home')
+
+
 def json_login_required(view):
     """AJAX uç noktaları için: oturum yoksa giriş sayfasına yönlendirmek yerine 401 JSON döner."""
     @wraps(view)
@@ -40,9 +57,10 @@ def json_login_required(view):
 
 @login_required
 def home(request):
-    summary = get_progress_summary(request.user)
+    language = get_active_language(request)
+    summary = get_progress_summary(request.user, language)
     return render(request, 'home.html', {
-        'queue': get_study_queue(request.user),
+        'queue': get_study_queue(request.user, language),
         'total_count': summary['total'],
         'learned_count': summary['learned'],
         'reviewing_count': summary['reviewing'],
@@ -54,9 +72,10 @@ def home(request):
 
 @login_required
 def stats(request):
+    language = get_active_language(request)
     return render(request, 'phrases/stats.html', {
-        'summary': get_progress_summary(request.user),
-        'sources': get_source_counts(request.user),
+        'summary': get_progress_summary(request.user, language),
+        'sources': get_source_counts(request.user, language),
         'review_target': REVIEW_TARGET,
         'review_interval': review_interval_label(),
     })
@@ -64,7 +83,11 @@ def stats(request):
 
 @login_required
 def phrase_list(request):
-    items = request.user.phrase_progress.select_related('phrase').order_by('-phrase__created_at', '-phrase_id')
+    language = get_active_language(request)
+    items = (
+        request.user.phrase_progress.filter(phrase__target_language=language)
+        .select_related('phrase').order_by('-phrase__created_at', '-phrase_id')
+    )
     return render(request, 'phrases/list.html', {'items': items, 'review_target': REVIEW_TARGET})
 
 
@@ -76,7 +99,8 @@ def phrase_create(request):
 
 @login_required
 def phrase_create_manual(request):
-    form = PhraseForm(request.POST) if request.method == 'POST' else PhraseForm()
+    initial = {'target_language': get_active_language(request)}
+    form = PhraseForm(request.POST) if request.method == 'POST' else PhraseForm(initial=initial)
     if request.method == 'POST':
         limit_error = _phrase_limit_error(request.user)
         if limit_error:
@@ -85,6 +109,7 @@ def phrase_create_manual(request):
             phrase = form.save(commit=False)
             phrase.user = request.user
             phrase.save()
+            set_active_language(request, phrase.target_language)
             messages.success(request, 'Phrase eklendi.')
             return redirect('phrase_detail', pk=phrase.pk)
     return render(request, 'phrases/form.html', {'form': form, 'title': 'Yeni phrase'})
@@ -106,9 +131,10 @@ def _ai_preview(request, form, category=None):
     })
 
 
-def _preview_form(result):
+def _preview_form(result, language_code):
     return PhraseForm(
         initial={
+            'target_language': language_code,
             'original_phrase': result.phrase,
             'translation': result.translation,
             'association_story': result.association_story,
@@ -117,16 +143,24 @@ def _preview_form(result):
     )
 
 
-def _known_phrases(user, current=''):
-    """Kullanıcının zaten bildiği ifadeler (AI bunlardan farklı seçer). `current`: önizlemede gösterilen ifade."""
-    known = list(user.phrases.values_list('original_phrase', flat=True)[:200])
+def _known_phrases(user, language_code, current=''):
+    """Kullanıcının aynı hedef dildeki bildiği ifadeler (AI bunlardan farklı seçer).
+
+    `current`: önizlemede gösterilen ifade (henüz kaydedilmediği için ayrıca eklenir).
+    """
+    known = list(user.phrases.filter(target_language=language_code).values_list('original_phrase', flat=True)[:200])
     current = ' '.join(current.split())[:ai.MAX_PHRASE_LENGTH]   # istemci metni: AI istemine sınırsız girmesin
     return [current, *known] if current else known
 
 
 @login_required
 def phrase_create_ai(request):
-    """İngilizce ifadeyi alır, AI ile üretir ve düzenlenebilir bir önizleme gösterir."""
+    """Hedef dildeki ifadeyi alır, AI ile üretir ve düzenlenebilir bir önizleme gösterir.
+
+    Hedef dil ayrıca sorulmaz: o an aktif olan dil (üstteki dil anahtarı) kullanılır, böylece yanlışlıkla
+    başka bir dilin altına karışık dilde phrase eklenmez.
+    """
+    language_code = get_active_language(request)
     form = AIPhraseInputForm(request.POST) if request.method == 'POST' else AIPhraseInputForm()
 
     if request.method == 'POST' and form.is_valid():
@@ -138,12 +172,12 @@ def phrase_create_ai(request):
             form.add_error(None, limit_error)
         else:
             try:
-                result = ai.generate_phrase(form.cleaned_data['original_phrase'])
+                result = ai.generate_phrase(form.cleaned_data['original_phrase'], language_code)
             except ai.AIError as error:
                 form.add_error(None, error.user_message)
             else:
-                ai.record_generation(request.user, result)
-                return _ai_preview(request, _preview_form(result))
+                ai.record_generation(request.user, result, language_code)
+                return _ai_preview(request, _preview_form(result, language_code))
 
     return render(request, 'phrases/ai_input.html', {
         'form': form,
@@ -155,7 +189,11 @@ def phrase_create_ai(request):
 
 @login_required
 def phrase_create_ai_auto(request):
-    """Tamamen AI: ifadeyi de AI seçer (kullanıcının zaten bildikleri hariç) ve düzenlenebilir önizleme gösterir."""
+    """Tamamen AI: ifadeyi de AI seçer (kullanıcının aynı dildeki bildikleri hariç) ve önizleme gösterir.
+
+    Hedef dil ayrıca sorulmaz: o an aktif olan dil (üstteki dil anahtarı) kullanılır.
+    """
+    language_code = get_active_language(request)
     form = AIAutoForm(request.POST) if request.method == 'POST' else AIAutoForm()
 
     if request.method == 'POST' and form.is_valid():
@@ -168,14 +206,14 @@ def phrase_create_ai_auto(request):
             form.add_error(None, limit_error)
         else:
             # Önizlemeden "başka bir phrase üret" denirse gösterilen ifade de (henüz kaydedilmediği için) hariç tutulur.
-            avoid = _known_phrases(request.user, request.POST.get('original_phrase', ''))
+            avoid = _known_phrases(request.user, language_code, request.POST.get('original_phrase', ''))
             try:
-                result = ai.generate_auto_phrase(category, avoid)
+                result = ai.generate_auto_phrase(category, language_code, avoid)
             except ai.AIError as error:
                 form.add_error(None, error.user_message)
             else:
-                ai.record_generation(request.user, result)
-                return _ai_preview(request, _preview_form(result), category=category)
+                ai.record_generation(request.user, result, language_code)
+                return _ai_preview(request, _preview_form(result, language_code), category=category)
 
     return render(request, 'phrases/ai_auto.html', {
         'form': form,
@@ -199,6 +237,7 @@ def phrase_create_ai_save(request):
         phrase.user = request.user
         phrase.source = Phrase.Source.AI_GENERATED
         phrase.save()
+        set_active_language(request, phrase.target_language)
         messages.success(request, 'AI ile üretilen phrase eklendi.')
         return redirect('phrase_detail', pk=phrase.pk)
     # Hata varsa önizleme yeniden gösterilir; tamamen AI modundan geldiyse (gizli `category` alanı) o mod korunur.

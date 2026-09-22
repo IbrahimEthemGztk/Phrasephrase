@@ -5,6 +5,7 @@
 
 {% block content %}
 {% include 'includes/topbar.html' with active='stats' %}
+{% include 'includes/language_switcher.html' %}
 
 <section class="page-head">
     <h2>İstatistik</h2>
@@ -13,7 +14,7 @@
 {% if summary.total == 0 %}
 <section class="empty-state">
     <h2>Henüz phrase'in yok</h2>
-    <p>İlk kalıp cümleni ekle; ilerlemen burada görünecek.</p>
+    <p>{{ active_language_name }}'de ilk kalıp cümleni ekle; ilerlemen burada görünecek.</p>
     <a class="btn btn-accent" href="{% url 'phrase_create' %}">İlk phrase'ini ekle</a>
 </section>
 {% else %}

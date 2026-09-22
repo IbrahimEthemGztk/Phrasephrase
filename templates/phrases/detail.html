@@ -13,7 +13,7 @@
         <h3 class="section-label">Cümle</h3>
         <div class="phrase-row">
             <p class="detail-original">{{ phrase.original_phrase }}</p>
-            {% include 'includes/speak_button.html' with text=phrase.original_phrase %}
+            {% include 'includes/speak_button.html' with text=phrase.original_phrase lang=phrase.target_language %}
         </div>
         <p class="detail-translation">{{ phrase.translation }}</p>
     </section>

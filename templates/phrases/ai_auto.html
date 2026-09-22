@@ -9,11 +9,14 @@
     <span class="brand">PhrasePhrase</span>
 </header>
 
+{% include 'includes/language_switcher.html' %}
+
 <section class="card">
     <h2 class="card-title title-with-icon">{% include 'includes/icon.html' with name='dice' %}Tamamen AI ile üret</h2>
     <p class="hint-text">
-        AI senin için bir İngilizce ifade seçer; anlamını, kelime kelime ses karşılıklarını ve çağrışım
-        hikayesini de hazırlar. Zaten eklediğin ifadeler tekrar seçilmez. Kaydetmeden önce düzenleyebilirsin.
+        AI senin için <strong>{{ active_language_name }}</strong> bir ifade seçer; anlamını, kelime kelime ses
+        karşılıklarını ve çağrışım hikayesini de hazırlar. Zaten eklediğin (aynı dildeki) ifadeler tekrar
+        seçilmez. Başka bir dil için üstteki dil anahtarını kullan.
     </p>
 
     {% if not ai_enabled %}

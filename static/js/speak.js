@@ -1,5 +1,7 @@
-// Sesli okuma: tarayıcının konuşma sentezi (Web Speech API) ile İngilizce cümleyi okur.
-// Tarayıcı desteklemiyorsa okuma düğmeleri gizli kalır. Ses üretimi cihazda yapılır, sunucuya istek gitmez.
+// Sesli okuma: tarayıcının konuşma sentezi (Web Speech API) ile hedef dildeki cümleyi okur.
+// Her düğme kendi dilini `data-speak-lang` ile taşır (bkz. includes/speak_button.html), böylece aynı
+// sayfada farklı dillerdeki kartlar doğru sesle okunur. Tarayıcı desteklemiyorsa düğmeler gizli kalır.
+// Ses üretimi cihazda yapılır, sunucuya istek gitmez.
 (function () {
     if (!('speechSynthesis' in window) || typeof SpeechSynthesisUtterance === 'undefined') return;
 
@@ -7,21 +9,20 @@
     if (!buttons.length) return;
 
     const synth = window.speechSynthesis;
-    let voice = null;
 
-    // Sesler bazı tarayıcılarda geç yüklenir; İngilizce (tercihen ABD) bir ses seçilir.
-    function pickVoice() {
+    // Sesler bazı tarayıcılarda geç yüklenir; verilen dile (tercihen tam bölge eşleşmesiyle) bir ses seçilir.
+    function pickVoice(locale) {
         const voices = synth.getVoices();
-        voice = voices.find((item) => item.lang === 'en-US') || voices.find((item) => item.lang.startsWith('en')) || null;
+        const base = locale.split('-')[0];
+        return voices.find((item) => item.lang === locale) || voices.find((item) => item.lang.startsWith(base)) || null;
     }
-    pickVoice();
-    if (synth.addEventListener) synth.addEventListener('voiceschanged', pickVoice);
 
-    function speak(text, button) {
+    function speak(text, locale, button) {
         synth.cancel();
         const utterance = new SpeechSynthesisUtterance(text);
-        utterance.lang = 'en-US';
+        utterance.lang = locale;
         utterance.rate = 0.9;
+        const voice = pickVoice(locale);
         if (voice) utterance.voice = voice;
         utterance.onstart = () => button.classList.add('is-speaking');
         utterance.onend = utterance.onerror = () => button.classList.remove('is-speaking');
@@ -32,7 +33,7 @@
 
     document.addEventListener('click', (event) => {
         const button = event.target.closest('[data-speak]');
-        if (button) speak(button.dataset.speak, button);
+        if (button) speak(button.dataset.speak, button.dataset.speakLang || 'en-US', button);
     });
 
     // Sayfadan ayrılırken ya da kart kaydırılırken okuma sürmesin.

@@ -48,9 +48,9 @@ class ReviewCycleTests(TestCase):
     def test_card_is_out_of_the_queue_until_24_hours_have_passed(self):
         self.swipe('right', self.t0)
         with patch('django.utils.timezone.now', return_value=self.t0 + DAY - timedelta(minutes=1)):
-            self.assertEqual(get_study_queue(self.user), [])
+            self.assertEqual(get_study_queue(self.user, 'en'), [])
         with patch('django.utils.timezone.now', return_value=self.t0 + DAY):
-            self.assertEqual([item.phrase_id for item in get_study_queue(self.user)], [self.phrase.pk])
+            self.assertEqual([item.phrase_id for item in get_study_queue(self.user, 'en')], [self.phrase.pk])
 
     def test_three_successes_in_a_row_make_the_card_permanently_learned(self):
         self.swipe('right', self.t0)
@@ -60,7 +60,7 @@ class ReviewCycleTests(TestCase):
         self.assertIsNone(progress.next_review_at)
         self.assertEqual(progress.swipe_right_count, 3)
         with patch('django.utils.timezone.now', return_value=self.t0 + 30 * DAY):
-            self.assertEqual(get_study_queue(self.user), [])
+            self.assertEqual(get_study_queue(self.user, 'en'), [])
 
     def test_second_success_keeps_it_in_review_with_a_new_24_hour_wait(self):
         self.swipe('right', self.t0)
@@ -77,7 +77,7 @@ class ReviewCycleTests(TestCase):
         self.assertEqual(failed.swipe_left_count, 1)
         # Kart hemen normal çalışma kuyruğuna döner.
         with patch('django.utils.timezone.now', return_value=self.t0 + 2 * DAY):
-            self.assertEqual([item.phrase_id for item in get_study_queue(self.user)], [self.phrase.pk])
+            self.assertEqual([item.phrase_id for item in get_study_queue(self.user, 'en')], [self.phrase.pk])
 
         self.swipe('right', self.t0 + 2 * DAY)
         self.swipe('right', self.t0 + 3 * DAY)
@@ -141,11 +141,11 @@ class ReviewUndoTests(TestCase):
             next_review_at=timezone.now() - timedelta(minutes=1),
         )
         record_swipe(self.user, self.phrase.pk, 'right')   # 2/3, 24 saat bekler
-        self.assertEqual(get_study_queue(self.user), [])
+        self.assertEqual(get_study_queue(self.user, 'en'), [])
 
         progress = undo_swipe(self.user, self.phrase.pk)
         self.assertEqual((progress.status, progress.review_streak, progress.swipe_right_count), (Status.REVIEWING, 1, 1))
-        self.assertEqual([item.phrase_id for item in get_study_queue(self.user)], [self.phrase.pk])
+        self.assertEqual([item.phrase_id for item in get_study_queue(self.user, 'en')], [self.phrase.pk])
 
     def test_undo_the_third_success_reopens_a_learned_card_as_second(self):
         set_progress(
@@ -157,7 +157,7 @@ class ReviewUndoTests(TestCase):
 
         progress = undo_swipe(self.user, self.phrase.pk)
         self.assertEqual((progress.status, progress.review_streak), (Status.REVIEWING, 2))
-        self.assertEqual([item.phrase_id for item in get_study_queue(self.user)], [self.phrase.pk])
+        self.assertEqual([item.phrase_id for item in get_study_queue(self.user, 'en')], [self.phrase.pk])
 
     def test_nothing_to_undo_for_a_learning_card_or_other_users(self):
         self.assertIsNone(undo_swipe(self.user, self.phrase.pk))
@@ -171,7 +171,7 @@ class ReviewQueueTests(TestCase):
         self.user = User.objects.create_user('ali@example.com', PASSWORD)
 
     def titles(self):
-        return [item.phrase.original_phrase for item in get_study_queue(self.user)]
+        return [item.phrase.original_phrase for item in get_study_queue(self.user, 'en')]
 
     def test_due_reviews_come_first_most_overdue_first_then_seen_then_unseen(self):
         now = timezone.now()
@@ -287,6 +287,11 @@ class SpeakButtonTests(TestCase):
         content = self.client.get(reverse('home')).content.decode()
         self.assertIn('data-speak="Say &quot;hi&quot; &amp; &lt;b&gt;go&lt;/b&gt;"', content)
 
+    def test_speak_button_include_does_not_leak_its_own_template_comment(self):
+        # Django {# #} yorumları birden fazla satıra bölünemez; bölünürse yorum metni sayfada görünür kalır.
+        for url in (reverse('home'), reverse('phrase_detail', args=[self.phrase.pk])):
+            self.assertNotContains(self.client.get(url), '{#')
+
 
 class StatsPageTests(TestCase):
     def setUp(self):
@@ -306,7 +311,7 @@ class StatsPageTests(TestCase):
 
     def test_summary_counts(self):
         self.build()
-        summary = get_progress_summary(self.user)
+        summary = get_progress_summary(self.user, 'en')
         self.assertEqual(
             {key: summary[key] for key in ('total', 'learning', 'reviewing', 'learned', 'due_reviews', 'queue_size')},
             {'total': 4, 'learning': 1, 'reviewing': 2, 'learned': 1, 'due_reviews': 1, 'queue_size': 2},

@@ -46,8 +46,8 @@ def is_due(progress, now=None):
     )
 
 
-def get_study_queue(user, limit=STUDY_QUEUE_LIMIT):
-    """Kullanıcının çalışma kuyruğunu döndürür (PhraseProgress listesi).
+def get_study_queue(user, language, limit=STUDY_QUEUE_LIMIT):
+    """Kullanıcının `language` (hedef dil kodu) için çalışma kuyruğunu döndürür (PhraseProgress listesi).
 
     Girenler: `learning` kartlar ve tekrar zamanı gelmiş `reviewing` kartlar. Sıra: önce zamanı gelmiş
     tekrarlar (en çok geciken önce), sonra görülüp öğrenilememiş kartlar (en eski gözden geçirilen önce),
@@ -63,7 +63,7 @@ def get_study_queue(user, limit=STUDY_QUEUE_LIMIT):
     queryset = (
         PhraseProgress.objects
         .filter(Q(status=Status.LEARNING) | Q(status=Status.REVIEWING, next_review_at__lte=timezone.now()))
-        .filter(user=user)
+        .filter(user=user, phrase__target_language=language)
         .select_related('phrase')
         .annotate(rank=rank)
         .order_by(
@@ -74,11 +74,11 @@ def get_study_queue(user, limit=STUDY_QUEUE_LIMIT):
     return list(queryset[:limit])
 
 
-def get_progress_summary(user):
-    """Kullanıcının phrase sayıları: toplam, durumlara göre dağılım, bugün tekrarı gelenler, sıradaki tekrar zamanı."""
+def get_progress_summary(user, language):
+    """`language` (hedef dil kodu) için phrase sayıları: toplam, durumlara göre dağılım, sıradaki tekrar zamanı."""
     Status = PhraseProgress.Status
     now = timezone.now()
-    summary = user.phrase_progress.aggregate(
+    summary = user.phrase_progress.filter(phrase__target_language=language).aggregate(
         total=Count('id'),
         learning=Count('id', filter=Q(status=Status.LEARNING)),
         reviewing=Count('id', filter=Q(status=Status.REVIEWING)),
@@ -94,9 +94,9 @@ def get_progress_summary(user):
     return summary
 
 
-def get_source_counts(user):
-    """Phrase'lerin kaynağına göre sayısı: {'manual': n, 'ai_generated': m}."""
-    counts = user.phrases.aggregate(
+def get_source_counts(user, language):
+    """`language` (hedef dil kodu) için kaynağa göre phrase sayısı: {'manual': n, 'ai_generated': m}."""
+    counts = user.phrases.filter(target_language=language).aggregate(
         manual=Count('id', filter=Q(source=Phrase.Source.MANUAL)),
         ai_generated=Count('id', filter=Q(source=Phrase.Source.AI_GENERATED)),
     )

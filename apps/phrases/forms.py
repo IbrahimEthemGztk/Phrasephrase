@@ -24,9 +24,10 @@ class PhraseForm(forms.ModelForm):
 
     class Meta:
         model = Phrase
-        fields = ('original_phrase', 'translation', 'association_story')
+        fields = ('target_language', 'original_phrase', 'translation', 'association_story')
         labels = {
-            'original_phrase': 'İngilizce cümle / deyim',
+            'target_language': 'Hedef dil',
+            'original_phrase': 'Cümle / deyim',
             'translation': 'Türkçe anlamı',
         }
         widgets = {
@@ -71,10 +72,10 @@ class PhraseForm(forms.ModelForm):
 
 
 class AIPhraseInputForm(forms.Form):
-    """AI ile üretim için tek alanlı giriş: yalnızca İngilizce ifade."""
+    """AI ile üretim için giriş: o an aktif olan hedef dildeki ifade (dil ayrıca sorulmaz, aktif dil kullanılır)."""
 
     original_phrase = forms.CharField(
-        label='İngilizce cümle / deyim',
+        label='Cümle / deyim',
         max_length=Phrase._meta.get_field('original_phrase').max_length,
         widget=forms.TextInput(attrs={'placeholder': 'Break a leg', 'autofocus': True, 'autocomplete': 'off'}),
     )
@@ -87,7 +88,7 @@ class AIPhraseInputForm(forms.Form):
 
 
 class AIAutoForm(forms.Form):
-    """Tamamen AI ile üretim: yalnızca istenen ifade türü seçilir, ifadeyi AI seçer."""
+    """Tamamen AI ile üretim: istenen ifade türü seçilir (dil sorulmaz, aktif dil kullanılır), ifadeyi AI seçer."""
 
     category = forms.ChoiceField(
         label='Ne tür bir ifade?',

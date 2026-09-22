@@ -1,6 +1,7 @@
 from django.conf import settings
 from django.db import models
 
+from . import languages
 from .validators import validate_word_breakdown
 
 
@@ -10,6 +11,10 @@ class Phrase(models.Model):
         AI_GENERATED = 'ai_generated', 'AI ile üretildi'
 
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='phrases')
+    # Sesteş/hikaye dili her zaman Türkçe; bu, öğrenilen hedef dildir (bkz. languages.py).
+    target_language = models.CharField(
+        'hedef dil', max_length=8, choices=languages.choices(), default=languages.DEFAULT_LANGUAGE_CODE,
+    )
     original_phrase = models.CharField('orijinal cümle', max_length=300)
     translation = models.CharField('çeviri', max_length=300)
     # Sıralı liste: [{"order": 1, "original_word": "...", "sound_hint": "..."}, ...]
@@ -63,6 +68,9 @@ class AIGeneration(models.Model):
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='ai_generations')
     prompt_text = models.CharField(max_length=300)
     model_name = models.CharField(max_length=100)
+    target_language = models.CharField(
+        'hedef dil', max_length=8, choices=languages.choices(), default=languages.DEFAULT_LANGUAGE_CODE,
+    )
     input_tokens = models.PositiveIntegerField(default=0)
     output_tokens = models.PositiveIntegerField(default=0)
     thought_tokens = models.PositiveIntegerField(default=0)

@@ -79,8 +79,8 @@ class PhraseCountLimitTests(TestCase):
 
     def test_ai_generation_is_blocked_before_calling_the_model_so_no_quota_is_wasted(self):
         for url_name, data in (
-            ('phrase_create_ai', {'original_phrase': 'Break a leg'}),
-            ('phrase_create_ai_auto', {'category': 'idiom'}),
+            ('phrase_create_ai', {'target_language': 'en', 'original_phrase': 'Break a leg'}),
+            ('phrase_create_ai_auto', {'target_language': 'en', 'category': 'idiom'}),
         ):
             with self.subTest(url_name), mock.patch('apps.phrases.ai.generate_phrase') as one, \
                     mock.patch('apps.phrases.ai.generate_auto_phrase') as auto:
@@ -141,8 +141,8 @@ class GlobalAIQuotaTests(TestCase):
     def test_both_generation_pages_are_blocked_without_calling_the_model(self):
         self.use(self.other, 4)
         for url_name, data in (
-            ('phrase_create_ai', {'original_phrase': 'Break a leg'}),
-            ('phrase_create_ai_auto', {'category': 'idiom'}),
+            ('phrase_create_ai', {'target_language': 'en', 'original_phrase': 'Break a leg'}),
+            ('phrase_create_ai_auto', {'target_language': 'en', 'category': 'idiom'}),
         ):
             with self.subTest(url_name), mock.patch('apps.phrases.ai.generate_phrase') as one, \
                     mock.patch('apps.phrases.ai.generate_auto_phrase') as auto:

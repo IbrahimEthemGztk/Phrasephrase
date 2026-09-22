@@ -78,6 +78,7 @@ TEMPLATES = [
             'context_processors': [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
+                'apps.phrases.context_processors.study_language',
                 'django.contrib.messages.context_processors.messages',
             ],
         },

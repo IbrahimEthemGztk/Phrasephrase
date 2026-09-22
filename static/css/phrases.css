@@ -207,3 +207,21 @@
     .topbar-stats { padding: .5rem; }
     .topbar .btn-ghost { padding-inline: .6rem; }
 }
+
+/* --- Hedef dil anahtarı --- */
+.lang-switch { display: flex; flex-wrap: wrap; gap: .4rem; margin: .75rem 0 0; }
+.lang-switch form { display: contents; }
+.lang-pill {
+    min-height: 2.25rem;
+    padding: .4rem 1rem;
+    border: 2px solid var(--line);
+    border-radius: var(--radius-pill);
+    background: var(--surface);
+    color: var(--muted);
+    font: inherit;
+    font-weight: 800;
+    font-size: var(--fs-sm);
+    cursor: pointer;
+}
+.lang-pill.is-active { border-color: var(--purple); background: var(--purple-soft); color: var(--purple-dark); }
+@media (hover: hover) { .lang-pill:not(.is-active):hover { border-color: var(--purple); color: var(--text); } }

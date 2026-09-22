@@ -20,6 +20,7 @@ def breakdown(*pairs):
 
 def form_data(words=('Break', 'a', 'leg'), hints=('breyk', 'ey', 'leg'), **overrides):
     data = {
+        'target_language': 'en',
         'original_phrase': 'Break a leg',
         'translation': 'Bol şans',
         'association_story': 'Bir bacağı kırıp bol şans diledi.',

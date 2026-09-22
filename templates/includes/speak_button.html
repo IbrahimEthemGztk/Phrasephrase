@@ -1,2 +1,3 @@
-{# İngilizce metni tarayıcının konuşma sentezi ile okuyan düğme. Kullanım: include ... with text=phrase.original_phrase. Desteklenmiyorsa speak.js gizli bırakır. #}
-<button type="button" class="speak-btn" data-speak="{{ text }}" aria-label="İngilizce okunuşunu dinle" title="Dinle" hidden>{% include 'includes/icon.html' with name='volume' %}</button>
+{% load phrase_extras %}
+{# Metni tarayıcının konuşma sentezi ile okuyan düğme. Kullanım: include ... with text=... lang=phrase.target_language. Desteklenmiyorsa speak.js gizli bırakır. #}
+<button type="button" class="speak-btn" data-speak="{{ text }}" data-speak-lang="{{ lang|speech_locale }}" aria-label="Okunuşunu dinle" title="Dinle" hidden>{% include 'includes/icon.html' with name='volume' %}</button>

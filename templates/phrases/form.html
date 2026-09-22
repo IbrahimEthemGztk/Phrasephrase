@@ -1,5 +1,6 @@
 {% extends 'base.html' %}
 {% load static %}
+{% load phrase_extras %}
 
 {% block title %}{{ title }} · PhrasePhrase{% endblock %}
 
@@ -11,6 +12,9 @@
 
 <section class="card">
     <h2 class="card-title">{{ title }}</h2>
+    {% if not phrase %}
+    <p class="hint-text">Hedef dil: <strong>{{ form.target_language.value|language_name }}</strong> (değiştirmek için Kartlar ekranındaki dil anahtarını kullan).</p>
+    {% endif %}
 
     {% if ai_mode %}
     <p class="ai-banner">
@@ -22,6 +26,8 @@
 
     <form method="post" novalidate data-phrase-form{% if form_action %} action="{{ form_action }}"{% endif %}>
         {% csrf_token %}
+        {# Hedef dil ayrıca sorulmaz: üstteki dil anahtarında hangi dil aktifse phrase o dile eklenir. #}
+        {{ form.target_language.as_hidden }}
         {% include 'includes/field.html' with field=form.original_phrase %}
         {% include 'includes/field.html' with field=form.translation %}
 

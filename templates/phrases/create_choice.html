@@ -4,9 +4,11 @@
 
 {% block content %}
 {% include 'includes/topbar.html' with active='add' %}
+{% include 'includes/language_switcher.html' %}
 
 <section class="card">
     <h2 class="card-title">Yeni phrase nasıl eklensin?</h2>
+    <p class="hint-text">Hedef dil: <strong>{{ active_language_name }}</strong> (değiştirmek için yukarıdaki dil anahtarını kullan).</p>
 
     <div class="choice-grid">
         <a class="choice-card" href="{% url 'phrase_create_manual' %}">
@@ -17,7 +19,7 @@
         {% if ai_enabled %}
         <a class="choice-card choice-ai" href="{% url 'phrase_create_ai' %}">
             <strong class="choice-title">{% include 'includes/icon.html' with name='sparkles' %}AI ile hikaye üret</strong>
-            <span class="choice-text">Sen İngilizce cümleyi yaz. Ses karşılıklarını ve hikayeyi AI hazırlasın, sonra sen düzenle.</span>
+            <span class="choice-text">Sen cümleyi yaz. Ses karşılıklarını ve hikayeyi AI hazırlasın, sonra sen düzenle.</span>
         </a>
         <a class="choice-card choice-ai" href="{% url 'phrase_create_ai_auto' %}">
             <strong class="choice-title">{% include 'includes/icon.html' with name='dice' %}Tamamen AI ile üret</strong>

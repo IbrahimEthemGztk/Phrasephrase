@@ -1,0 +1,12 @@
+{# Hedef dil anahtarı: 2. dilden itibaren görünür, tek dil varken gereksiz yer kaplamaz. #}
+{% if target_languages|length > 1 %}
+<nav class="lang-switch" aria-label="Hedef dil">
+    {% for code, lang in target_languages.items %}
+    <form method="post" action="{% url 'set_language' code %}">
+        {% csrf_token %}
+        <input type="hidden" name="next" value="{{ request.path }}">
+        <button type="submit" class="lang-pill{% if code == active_language %} is-active{% endif %}"{% if code == active_language %} aria-current="true"{% endif %}>{{ lang.name }}</button>
+    </form>
+    {% endfor %}
+</nav>
+{% endif %}

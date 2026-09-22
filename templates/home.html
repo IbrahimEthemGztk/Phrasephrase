@@ -9,11 +9,12 @@
 
 {% block content %}
 {% include 'includes/topbar.html' with active='cards' %}
+{% include 'includes/language_switcher.html' %}
 
 {% if total_count == 0 %}
 <section class="empty-state">
     <h2>Henüz phrase'in yok</h2>
-    <p>İlk kalıp cümleni ekle, çağrışımlarla ezberlemeye başla.</p>
+    <p>{{ active_language_name }}'de ilk kalıp cümleni ekle, çağrışımlarla ezberlemeye başla.</p>
     <a class="btn btn-accent" href="{% url 'phrase_create' %}">İlk phrase'ini ekle</a>
 </section>
 {% else %}

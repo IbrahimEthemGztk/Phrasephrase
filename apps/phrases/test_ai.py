@@ -9,13 +9,14 @@ from django.utils import timezone
 
 from apps.users.models import User
 
-from . import ai
+from . import ai, languages
 from .models import AIGeneration, Phrase, PhraseProgress
 from .validators import MAX_TEXT_LENGTH, MAX_WORDS
 
 PASSWORD = 'gizli-parola-123'
 WORDS = ['Break', 'a', 'leg']
 HINTS = ['Bırak', 'Ey', 'Lig']
+EN = languages.TARGET_LANGUAGES['en']
 
 
 def reply_json(words=WORDS, hints=HINTS, translation='Bol şans', story='Antrenör bağırdı: bırak, ey, lig!', **overrides):
@@ -139,10 +140,10 @@ class HelperTests(SimpleTestCase):
 
 @override_settings(GEMINI_API_KEY='test-key')
 class GeneratePhraseTests(SimpleTestCase):
-    def generate(self, side_effect, phrase='Break a leg'):
+    def generate(self, side_effect, phrase='Break a leg', language_code='en'):
         with mock.patch('apps.phrases.ai._create_interaction', side_effect=side_effect) as create:
             try:
-                return ai.generate_phrase(phrase), create
+                return ai.generate_phrase(phrase, language_code), create
             except ai.AIError as error:
                 return error, create
 
@@ -156,7 +157,7 @@ class GeneratePhraseTests(SimpleTestCase):
 
     def test_phrase_is_normalized_and_words_are_passed_to_the_model(self):
         result, create = self.generate([model_reply()], phrase='  Break   a leg ')
-        create.assert_called_once_with(WORDS)
+        create.assert_called_once_with(WORDS, EN)
         self.assertEqual(result.phrase, 'Break a leg')
 
     def test_invalid_output_is_retried_once_and_tokens_are_summed(self):
@@ -214,6 +215,11 @@ class GeneratePhraseTests(SimpleTestCase):
         self.assertIsInstance(error, ai.AINotConfigured)
         self.assertFalse(ai.is_configured())
 
+    def test_unknown_language_is_rejected_before_calling_the_model(self):
+        error, create = self.generate([model_reply()], language_code='xx')
+        create.assert_not_called()
+        self.assertEqual(error.reason, 'invalid_input')
+
     def test_invalid_input_is_rejected_before_calling_the_model(self):
         for phrase in ('', '   ', ' '.join(['w'] * (MAX_WORDS + 1)), 'a' * (ai.MAX_PHRASE_LENGTH + 1)):
             with self.subTest(phrase[:20]):
@@ -250,9 +256,10 @@ class QuotaTests(TestCase):
 
     def test_record_generation_stores_usage(self):
         result = ai.GeneratedPhrase('Break a leg', 'Bol şans', [], 'Hikaye', 10, 20, 30)
-        record = ai.record_generation(self.user, result)
+        record = ai.record_generation(self.user, result, 'es')
         self.assertEqual((record.input_tokens, record.output_tokens, record.thought_tokens), (10, 20, 30))
         self.assertEqual(record.prompt_text, 'Break a leg')
+        self.assertEqual(record.target_language, 'es')
 
 
 def fake_generation(phrase='Break a leg'):
@@ -304,8 +311,8 @@ class AIViewTests(TestCase):
 
     def test_successful_generation_shows_an_editable_preview_without_saving(self):
         with self.generate_patch(return_value=fake_generation()) as generate:
-            response = self.client.post(self.url, {'original_phrase': '  Break   a leg '})
-        generate.assert_called_once_with('Break a leg')
+            response = self.client.post(self.url, {'target_language': 'en', 'original_phrase': '  Break   a leg '})
+        generate.assert_called_once_with('Break a leg', 'en')
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'AI tarafından üretildi')
         self.assertContains(response, f'action="{self.save_url}"')
@@ -325,14 +332,14 @@ class AIViewTests(TestCase):
         too_many_words = ' '.join(['kelime'] * (MAX_WORDS + 1))
         for phrase in ('', '   ', too_many_words, 'a' * 301):
             with self.subTest(phrase[:15]), self.generate_patch() as generate:
-                response = self.client.post(self.url, {'original_phrase': phrase})
+                response = self.client.post(self.url, {'target_language': 'en', 'original_phrase': phrase})
                 self.assertEqual(response.status_code, 200)
                 generate.assert_not_called()
         self.assertFalse(AIGeneration.objects.exists())
 
     def test_ai_error_is_shown_and_does_not_use_quota(self):
         with self.generate_patch(side_effect=ai.AIError('AI servisi şu an çok yoğun.', 'rate_limit')):
-            response = self.client.post(self.url, {'original_phrase': 'Break a leg'})
+            response = self.client.post(self.url, {'target_language': 'en', 'original_phrase': 'Break a leg'})
         self.assertContains(response, 'AI servisi şu an çok yoğun.')
         self.assertContains(response, reverse('phrase_create_manual'))   # manuel yol açık kalır
         self.assertFalse(AIGeneration.objects.exists())
@@ -342,7 +349,7 @@ class AIViewTests(TestCase):
         for _ in range(3):
             AIGeneration.objects.create(user=self.user, prompt_text='x', model_name='m')
         with self.generate_patch() as generate:
-            response = self.client.post(self.url, {'original_phrase': 'Break a leg'})
+            response = self.client.post(self.url, {'target_language': 'en', 'original_phrase': 'Break a leg'})
         generate.assert_not_called()
         self.assertContains(response, 'Bugünlük AI üretim hakkın doldu')
         self.assertEqual(AIGeneration.objects.count(), 3)
@@ -352,22 +359,23 @@ class AIViewTests(TestCase):
         for _ in range(3):
             AIGeneration.objects.create(user=other, prompt_text='x', model_name='m')
         with self.generate_patch(return_value=fake_generation()) as generate:
-            self.client.post(self.url, {'original_phrase': 'Break a leg'})
+            self.client.post(self.url, {'target_language': 'en', 'original_phrase': 'Break a leg'})
         generate.assert_called_once()
 
     @override_settings(GEMINI_API_KEY='')
     def test_post_without_api_key_is_rejected_gracefully(self):
         with self.generate_patch() as generate:
-            response = self.client.post(self.url, {'original_phrase': 'Break a leg'})
+            response = self.client.post(self.url, {'target_language': 'en', 'original_phrase': 'Break a leg'})
         generate.assert_not_called()
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'yapılandırılmamış')
 
     def test_regenerating_uses_one_more_generation_each_time(self):
         with self.generate_patch(return_value=fake_generation()):
-            self.client.post(self.url, {'original_phrase': 'Break a leg'})
+            self.client.post(self.url, {'target_language': 'en', 'original_phrase': 'Break a leg'})
             response = self.client.post(self.url, {
-                'original_phrase': 'Break a leg', 'translation': 'düzenlenmiş', 'association_story': 'x',
+                'target_language': 'en', 'original_phrase': 'Break a leg', 'translation': 'düzenlenmiş',
+                'association_story': 'x',
                 'original_word': ['Break'], 'sound_hint': ['bozuk'],   # önizleme formunun diğer alanları yok sayılır
             })
         self.assertContains(response, 'Bugün kalan hak: 1')
@@ -377,6 +385,7 @@ class AIViewTests(TestCase):
 
     def save_data(self, **overrides):
         data = {
+            'target_language': 'en',
             'original_phrase': 'Break a leg',
             'translation': 'Bol şans',
             'association_story': 'Komik bir hikaye.',
@@ -431,7 +440,7 @@ class AIViewTests(TestCase):
             with self.subTest(url):
                 self.assertRedirects(anonymous.get(url), f"{reverse('login')}?next={url}")
         with self.generate_patch() as generate:
-            response = anonymous.post(self.url, {'original_phrase': 'Break a leg'})
+            response = anonymous.post(self.url, {'target_language': 'en', 'original_phrase': 'Break a leg'})
             self.assertEqual(response.status_code, 302)
             generate.assert_not_called()
         self.assertEqual(anonymous.post(self.save_url, self.save_data()).status_code, 302)

@@ -26,7 +26,7 @@ class StudyQueueTests(TestCase):
         self.user = User.objects.create_user('ali@example.com', PASSWORD)
 
     def queue_titles(self, user=None):
-        return [item.phrase.original_phrase for item in get_study_queue(user or self.user)]
+        return [item.phrase.original_phrase for item in get_study_queue(user or self.user, 'en')]
 
     def test_seen_cards_come_first_oldest_review_first_then_unseen_by_creation(self):
         now = timezone.now()
@@ -56,7 +56,7 @@ class StudyQueueTests(TestCase):
     def test_queue_is_limited(self):
         for index in range(STUDY_QUEUE_LIMIT + 5):
             make_phrase(self.user, original_phrase=f'Phrase {index}')
-        self.assertEqual(len(get_study_queue(self.user)), STUDY_QUEUE_LIMIT)
+        self.assertEqual(len(get_study_queue(self.user, 'en')), STUDY_QUEUE_LIMIT)
 
 
 class SwipeEndpointTests(TestCase):
@@ -169,11 +169,11 @@ class SwipeUndoTests(TestCase):
 
     def test_swipe_then_undo_restores_queue_position(self):
         second = make_phrase(self.user, original_phrase='İkinci')
-        self.assertEqual([i.phrase_id for i in get_study_queue(self.user)], [self.phrase.pk, second.pk])
+        self.assertEqual([i.phrase_id for i in get_study_queue(self.user, 'en')], [self.phrase.pk, second.pk])
         self.client.post(self.swipe_url, {'direction': 'right'})
-        self.assertEqual([i.phrase_id for i in get_study_queue(self.user)], [second.pk])
+        self.assertEqual([i.phrase_id for i in get_study_queue(self.user, 'en')], [second.pk])
         self.client.post(self.undo_url, {'direction': 'right'})
-        self.assertEqual([i.phrase_id for i in get_study_queue(self.user)], [self.phrase.pk, second.pk])
+        self.assertEqual([i.phrase_id for i in get_study_queue(self.user, 'en')], [self.phrase.pk, second.pk])
 
 
 class CardsPageTests(TestCase):
@@ -287,7 +287,7 @@ class RelearnTests(TestCase):
 
     def test_relearn_puts_learned_phrase_back_into_the_queue_and_keeps_history(self):
         self.learn()
-        self.assertEqual(get_study_queue(self.user), [])
+        self.assertEqual(get_study_queue(self.user, 'en'), [])
 
         response = self.client.post(self.url)
         self.assertRedirects(response, reverse('phrase_list'))
@@ -295,7 +295,7 @@ class RelearnTests(TestCase):
         self.assertEqual(progress.status, PhraseProgress.Status.LEARNING)
         self.assertEqual(progress.review_streak, 0)   # 3 başarı baştan gerekir
         self.assertEqual((progress.swipe_left_count, progress.swipe_right_count), (2, 3))
-        self.assertEqual([item.phrase_id for item in get_study_queue(self.user)], [self.phrase.pk])
+        self.assertEqual([item.phrase_id for item in get_study_queue(self.user, 'en')], [self.phrase.pk])
 
     def test_relearn_shows_confirmation_message(self):
         self.learn()
