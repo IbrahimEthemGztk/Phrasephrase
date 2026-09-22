@@ -30,6 +30,8 @@
         {{ form.target_language.as_hidden }}
         {% include 'includes/field.html' with field=form.original_phrase %}
         {% include 'includes/field.html' with field=form.translation %}
+        {% include 'includes/field.html' with field=form.example_sentence %}
+        {% include 'includes/field.html' with field=form.example_sentence_translation %}
 
         <fieldset class="breakdown-editor">
             <legend>Sesli parçalama</legend>

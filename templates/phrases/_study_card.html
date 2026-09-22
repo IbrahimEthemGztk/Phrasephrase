@@ -16,6 +16,15 @@
             <p class="detail-original">{{ phrase.original_phrase }}</p>
             {% include 'includes/speak_button.html' with text=phrase.original_phrase lang=phrase.target_language %}
         </div>
+        {% if phrase.example_sentence %}
+        <div class="example-block">
+            <p class="example-label">Örnek cümle</p>
+            <div class="phrase-row">
+                <p class="detail-example">{{ phrase.example_sentence }}</p>
+                {% include 'includes/speak_button.html' with text=phrase.example_sentence lang=phrase.target_language %}
+            </div>
+        </div>
+        {% endif %}
     </section>
 
     <section class="card-part part-breakdown">
@@ -31,6 +40,10 @@
     <section class="card-part part-meaning">
         <h3 class="section-label">Anlamı</h3>
         <p class="detail-meaning">{{ phrase.translation }}</p>
+        {% if phrase.example_sentence_translation %}
+        <p class="example-label">Örnek cümlenin anlamı</p>
+        <p class="detail-example-meaning">{{ phrase.example_sentence_translation }}</p>
+        {% endif %}
     </section>
 
     <button type="button" class="reveal-btn" data-reveal>Sesli parçalamayı göster</button>

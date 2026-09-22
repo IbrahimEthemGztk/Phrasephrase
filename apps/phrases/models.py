@@ -17,6 +17,9 @@ class Phrase(models.Model):
     )
     original_phrase = models.CharField('orijinal cümle', max_length=300)
     translation = models.CharField('çeviri', max_length=300)
+    # İfadenin gerçek bir cümle içinde kullanıldığı örnek; boş olabilir (eski kayıtlar, bkz. migration 0006).
+    example_sentence = models.CharField('örnek cümle', max_length=300, blank=True, default='')
+    example_sentence_translation = models.CharField('örnek cümlenin çevirisi', max_length=300, blank=True, default='')
     # Sıralı liste: [{"order": 1, "original_word": "...", "sound_hint": "..."}, ...]
     word_breakdown = models.JSONField('kelime kelime ses karşılığı', default=list, validators=[validate_word_breakdown])
     association_story = models.TextField('çağrışım hikayesi')

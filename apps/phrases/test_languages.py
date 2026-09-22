@@ -230,6 +230,8 @@ class ViewIntegrationTests(TestCase):
 
         save_data = {
             'target_language': 'es', 'original_phrase': 'Dar en el clavo', 'translation': 'Tam on ikiden vurmak',
+            'example_sentence': 'Con esa respuesta, diste en el clavo.',
+            'example_sentence_translation': 'O cevapla tam on ikiden vurdun.',
             'association_story': 'Hikaye.', 'original_word': ['Dar', 'en', 'el', 'clavo'],
             'sound_hint': ['ses1', 'ses2', 'ses3', 'ses4'],
         }

@@ -23,6 +23,8 @@ def form_data(words=('Break', 'a', 'leg'), hints=('breyk', 'ey', 'leg'), **overr
         'target_language': 'en',
         'original_phrase': 'Break a leg',
         'translation': 'Bol şans',
+        'example_sentence': 'Break a leg tonight.',
+        'example_sentence_translation': 'Bu gece bol şanslar.',
         'association_story': 'Bir bacağı kırıp bol şans diledi.',
         'original_word': list(words),
         'sound_hint': list(hints),

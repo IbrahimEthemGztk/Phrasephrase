@@ -33,6 +33,8 @@ logger = logging.getLogger(__name__)
 
 MAX_PHRASE_LENGTH = Phrase._meta.get_field('original_phrase').max_length
 MAX_TRANSLATION_LENGTH = Phrase._meta.get_field('translation').max_length
+MAX_EXAMPLE_LENGTH = Phrase._meta.get_field('example_sentence').max_length
+MAX_EXAMPLE_TRANSLATION_LENGTH = Phrase._meta.get_field('example_sentence_translation').max_length
 MAX_STORY_LENGTH = 1500
 MAX_ATTEMPTS = 2   # geçersiz çıktıda bir kez daha denenir
 NEVER_RETRY_STATUS = 599   # gerçekte dönmeyen durum kodu: SDK'nın otomatik yeniden denemesini devre dışı bırakır
@@ -73,6 +75,10 @@ def _fields(language, subject, extra_first=''):
     return f"""\
 {extra_first}- translation: İfadenin doğal ve kısa TÜRKÇE anlamı (kelimesi kelimesine çeviri değil). Bu alanı \
 MUTLAKA Türkçe yaz; {language.name} ya da başka bir dilde yazma.
+- example_sentence: İfadenin gerçek, doğal bir {language.name} cümle içinde kullanıldığı GERÇEKÇİ bir örnek \
+cümle. İfadenin kendisini aynen (biçim değiştirmeden) içermeli. Bu alanı MUTLAKA {language.name} yaz.
+- example_translation: example_sentence'ın doğal ve kısa TÜRKÇE çevirisi. Bu alanı MUTLAKA Türkçe yaz; \
+{language.name} ya da başka bir dilde yazma.
 - words: {subject}, aynı sırada, tam olarak bir öğe:
    - original_word: kelimeyi ifadedeki gibi aynen yaz.
    - sound_hint: O kelimenin {language.name} telaffuzuna kulağa benzeyen, sözlükte bulunan GERÇEK bir Türkçe \
@@ -93,6 +99,8 @@ def _render_example(number, example):
 İfade: {example.phrase}
 Kelimeler: {words_line}
 translation: {example.translation}
+example_sentence: {example.example_sentence}
+example_translation: {example.example_translation}
 words: {mapping_line}
 association_story: {example.story}
 """
@@ -132,10 +140,12 @@ RESPONSE_SCHEMA = {
     'type': 'object',
     'properties': {
         'translation': {'type': 'string'},
+        'example_sentence': {'type': 'string'},
+        'example_translation': {'type': 'string'},
         'words': {'type': 'array', 'items': _WORD_ITEM_SCHEMA},
         'association_story': {'type': 'string'},
     },
-    'required': ['translation', 'words', 'association_story'],
+    'required': ['translation', 'example_sentence', 'example_translation', 'words', 'association_story'],
 }
 
 AUTO_RESPONSE_SCHEMA = {
@@ -189,6 +199,8 @@ class GeneratedPhrase:
     translation: str
     word_breakdown: list
     association_story: str
+    example_sentence: str = ''
+    example_translation: str = ''
     input_tokens: int = 0
     output_tokens: int = 0
     thought_tokens: int = 0
@@ -253,12 +265,14 @@ def _load_json(text):
 
 
 def _build_result(data, words):
-    """Model çıktısındaki çeviri, ses karşılıkları ve hikayeyi `words` listesine göre doğrular.
+    """Model çıktısındaki çeviri, örnek cümle, ses karşılıkları ve hikayeyi `words` listesine göre doğrular.
 
     Kelimeler sunucunun kendi bölmesinden gelir; model yalnızca ses karşılıklarını verir ve sıra numaralarını
     sunucu üretir. Geçersizse AIOutputError.
     """
     translation = data.get('translation')
+    example_sentence = data.get('example_sentence')
+    example_translation = data.get('example_translation')
     story = data.get('association_story')
     items = data.get('words')
 
@@ -266,6 +280,14 @@ def _build_result(data, words):
         raise AIOutputError('Çeviri eksik.')
     if len(translation.strip()) > MAX_TRANSLATION_LENGTH:
         raise AIOutputError('Çeviri çok uzun.')
+    if not isinstance(example_sentence, str) or not example_sentence.strip():
+        raise AIOutputError('Örnek cümle eksik.')
+    if len(example_sentence.strip()) > MAX_EXAMPLE_LENGTH:
+        raise AIOutputError('Örnek cümle çok uzun.')
+    if not isinstance(example_translation, str) or not example_translation.strip():
+        raise AIOutputError('Örnek cümlenin çevirisi eksik.')
+    if len(example_translation.strip()) > MAX_EXAMPLE_TRANSLATION_LENGTH:
+        raise AIOutputError('Örnek cümlenin çevirisi çok uzun.')
     if not isinstance(story, str) or not story.strip():
         raise AIOutputError('Hikaye eksik.')
     if len(story.strip()) > MAX_STORY_LENGTH:
@@ -293,7 +315,7 @@ def _build_result(data, words):
     except ValidationError as error:
         raise AIOutputError('; '.join(error.messages)) from error
 
-    return translation.strip(), breakdown, story.strip()
+    return translation.strip(), example_sentence.strip(), example_translation.strip(), breakdown, story.strip()
 
 
 def parse_reply(text, words):
@@ -305,7 +327,8 @@ def parse_auto_reply(text, avoid, language):
     """Tamamen AI modu: modelin seçtiği ifadeyi ve çıktısını doğrular.
 
     İfade, modelin döndürdüğü `words` listesiyle aynı sunucu bölmesinden geçirilerek eşleştirilir; kullanıcının
-    zaten bildiği (ya da prompt örneği olan) ifadeler reddedilir. (ifade, çeviri, kırılım, hikaye) döndürür.
+    zaten bildiği (ya da prompt örneği olan) ifadeler reddedilir. (ifade, çeviri, örnek cümle, örnek cümlenin
+    çevirisi, kırılım, hikaye) döndürür.
     """
     data = _load_json(text)
     phrase = data.get('phrase')
@@ -323,8 +346,8 @@ def parse_auto_reply(text, avoid, language):
     if normalize_for_compare(phrase) in known:
         raise AIOutputError('İfade zaten mevcut.')
 
-    translation, breakdown, story = _build_result(data, words)
-    return phrase, translation, breakdown, story
+    translation, example_sentence, example_translation, breakdown, story = _build_result(data, words)
+    return phrase, translation, example_sentence, example_translation, breakdown, story
 
 
 # ---- Model çağrısı ----
@@ -415,7 +438,8 @@ def _translate_error(error):
 
 
 def _run(create, parse):
-    """Ortak üretim döngüsü. `create()` -> ModelReply; `parse(text)` -> (ifade, çeviri, kırılım, hikaye).
+    """Ortak üretim döngüsü. `create()` -> ModelReply; `parse(text)` -> (ifade, çeviri, örnek cümle,
+    örnek cümlenin çevirisi, kırılım, hikaye).
 
     Geçersiz çıktıda bir kez daha denenir; API/ağ hataları yeniden denenmeden kullanıcı mesajına çevrilir.
     """
@@ -436,7 +460,7 @@ def _run(create, parse):
 
         if reply.status == 'completed':
             try:
-                phrase, translation, breakdown, story = parse(reply.text)
+                phrase, translation, example_sentence, example_translation, breakdown, story = parse(reply.text)
             except AIOutputError as error:
                 logger.info('AI çıktısı geçersiz (deneme %s/%s): %s', attempt, MAX_ATTEMPTS, error)
                 continue
@@ -445,6 +469,8 @@ def _run(create, parse):
                 translation=translation,
                 word_breakdown=breakdown,
                 association_story=story,
+                example_sentence=example_sentence,
+                example_translation=example_translation,
                 input_tokens=tokens['input'],
                 output_tokens=tokens['output'],
                 thought_tokens=tokens['thought'],
@@ -465,7 +491,7 @@ def _resolve_language(language_code):
 
 
 def generate_phrase(phrase_text, language_code):
-    """Hedef dildeki ifade için çeviri, kelime kelime ses karşılığı ve hikaye üretir.
+    """Hedef dildeki ifade için çeviri, örnek cümle (ve çevirisi), kelime kelime ses karşılığı ve hikaye üretir.
 
     AIError fırlatabilir (mesajı kullanıcıya gösterilebilir). Kota kontrolü ve kayıt çağıranın işidir.
     """
@@ -485,7 +511,7 @@ def generate_phrase(phrase_text, language_code):
 
 
 def generate_auto_phrase(category, language_code, avoid=()):
-    """Tamamen AI: ifadeyi de AI seçer; çeviri, ses karşılıkları ve hikayeyi üretir.
+    """Tamamen AI: ifadeyi de AI seçer; çeviri, örnek cümle (ve çevirisi), ses karşılıkları ve hikayeyi üretir.
 
     `avoid`: kullanıcının zaten bildiği ifadeler (bunlardan farklı bir ifade seçilir). AIError fırlatabilir.
     """

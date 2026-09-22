@@ -16,6 +16,16 @@
             {% include 'includes/speak_button.html' with text=phrase.original_phrase lang=phrase.target_language %}
         </div>
         <p class="detail-translation">{{ phrase.translation }}</p>
+        {% if phrase.example_sentence %}
+        <div class="example-block">
+            <p class="example-label">Örnek cümle</p>
+            <div class="phrase-row">
+                <p class="detail-example">{{ phrase.example_sentence }}</p>
+                {% include 'includes/speak_button.html' with text=phrase.example_sentence lang=phrase.target_language %}
+            </div>
+            <p class="detail-example-meaning">{{ phrase.example_sentence_translation }}</p>
+        </div>
+        {% endif %}
     </section>
 
     <section class="detail-section">

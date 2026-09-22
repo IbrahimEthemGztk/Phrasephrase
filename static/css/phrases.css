@@ -52,6 +52,12 @@
 .detail-story { margin: 0; line-height: 1.55; }
 .detail-actions { display: flex; gap: .75rem; flex-wrap: wrap; }
 
+/* --- Örnek cümle (Cümle/Anlamı bölümlerinde phrase'in kendisiyle birlikte gösterilir) --- */
+.example-block { margin-top: .75rem; padding-top: .75rem; border-top: 2px dashed var(--line-strong); }
+.example-label { margin: 0 0 .25rem; font-size: var(--fs-xs); letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+.detail-example { margin: 0; font-size: 1.05rem; font-weight: 700; line-height: 1.4; overflow-wrap: anywhere; }
+.detail-example-meaning { margin: .25rem 0 0; color: var(--muted); font-size: 1rem; }
+
 /* --- Form: kelime satırları --- */
 .breakdown-editor { margin: 0 0 1rem; padding: 1rem; border: 2px solid var(--line); border-radius: 16px; min-width: 0; }
 .breakdown-editor legend { padding: 0 .4rem; font-weight: 800; }

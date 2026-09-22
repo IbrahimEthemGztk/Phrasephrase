@@ -12,6 +12,17 @@ class PhraseForm(forms.ModelForm):
     """Phrase formu. Kelime/ses karşılığı satırları `original_word` ve `sound_hint` alanlarının
     tekrarlanan girdileri olarak gelir ve sıra numarası sunucuda üretilir."""
 
+    # Modelde blank=True (eski kayıtlar boş kalabilsin diye); yeni eklenen her phrase için burada zorunlu kılınır.
+    example_sentence = forms.CharField(
+        label='Örnek cümle',
+        max_length=Phrase._meta.get_field('example_sentence').max_length,
+        widget=forms.TextInput(attrs={'placeholder': "Don't worry, it will be a piece of cake."}),
+    )
+    example_sentence_translation = forms.CharField(
+        label='Örnek cümlenin Türkçe anlamı',
+        max_length=Phrase._meta.get_field('example_sentence_translation').max_length,
+        widget=forms.TextInput(attrs={'placeholder': 'Merak etme, çocuk oyuncağı olacak.'}),
+    )
     # Modelde TextField olduğu için sınır yok; burada AI çıktısıyla aynı üst sınır uygulanır (veritabanını şişirmesin).
     association_story = forms.CharField(
         label='Çağrışım hikayesi',
@@ -24,7 +35,10 @@ class PhraseForm(forms.ModelForm):
 
     class Meta:
         model = Phrase
-        fields = ('target_language', 'original_phrase', 'translation', 'association_story')
+        fields = (
+            'target_language', 'original_phrase', 'translation', 'example_sentence',
+            'example_sentence_translation', 'association_story',
+        )
         labels = {
             'target_language': 'Hedef dil',
             'original_phrase': 'Cümle / deyim',

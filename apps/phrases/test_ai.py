@@ -19,9 +19,12 @@ HINTS = ['Bırak', 'Ey', 'Lig']
 EN = languages.TARGET_LANGUAGES['en']
 
 
-def reply_json(words=WORDS, hints=HINTS, translation='Bol şans', story='Antrenör bağırdı: bırak, ey, lig!', **overrides):
+def reply_json(words=WORDS, hints=HINTS, translation='Bol şans', story='Antrenör bağırdı: bırak, ey, lig!',
+               example_sentence='Break a leg tonight.', example_translation='Bu gece bol şanslar.', **overrides):
     data = {
         'translation': translation,
+        'example_sentence': example_sentence,
+        'example_translation': example_translation,
         'words': [{'original_word': word, 'sound_hint': hint} for word, hint in zip(words, hints)],
         'association_story': story,
     }
@@ -67,6 +70,8 @@ class ParseReplyTests(SimpleTestCase):
     def test_valid_reply_is_parsed_and_order_is_assigned_by_the_server(self):
         text = json.dumps({
             'translation': ' Bol şans ',
+            'example_sentence': ' Break a leg tonight. ',
+            'example_translation': ' Bu gece bol şanslar. ',
             'words': [
                 {'original_word': 'Break', 'sound_hint': 'Bırak', 'order': 3},   # modelin order alanı yok sayılır
                 {'original_word': 'a', 'sound_hint': 'Ey', 'order': 1},
@@ -74,8 +79,10 @@ class ParseReplyTests(SimpleTestCase):
             ],
             'association_story': ' Hikaye ',
         })
-        translation, breakdown, story = ai.parse_reply(text, WORDS)
+        translation, example_sentence, example_translation, breakdown, story = ai.parse_reply(text, WORDS)
         self.assertEqual(translation, 'Bol şans')
+        self.assertEqual(example_sentence, 'Break a leg tonight.')
+        self.assertEqual(example_translation, 'Bu gece bol şanslar.')
         self.assertEqual(story, 'Hikaye')
         self.assertEqual(breakdown, [
             {'order': 1, 'original_word': 'Break', 'sound_hint': 'Bırak'},
@@ -85,12 +92,12 @@ class ParseReplyTests(SimpleTestCase):
 
     def test_original_words_come_from_the_servers_own_split_not_from_the_model(self):
         text = reply_json(words=['break', 'A', 'LEG'])   # model büyük/küçük harfi değiştirmiş
-        _, breakdown, _ = ai.parse_reply(text, WORDS)
+        _, _, _, breakdown, _ = ai.parse_reply(text, WORDS)
         self.assertEqual([item['original_word'] for item in breakdown], WORDS)
 
     def test_punctuation_stays_on_the_word(self):
         words = ['How', 'are', 'you?']
-        _, breakdown, _ = ai.parse_reply(reply_json(words=words), words)
+        _, _, _, breakdown, _ = ai.parse_reply(reply_json(words=words), words)
         self.assertEqual(breakdown[2]['original_word'], 'you?')
 
     def test_invalid_replies_are_rejected(self):
@@ -106,6 +113,10 @@ class ParseReplyTests(SimpleTestCase):
             'boş metin': '',
             'çeviri yok': with_overrides(translation=''),
             'çeviri çok uzun': with_overrides(translation='a' * 301),
+            'örnek cümle yok': with_overrides(example_sentence='  '),
+            'örnek cümle çok uzun': with_overrides(example_sentence='a' * 301),
+            'örnek cümle çevirisi yok': with_overrides(example_translation=''),
+            'örnek cümle çevirisi çok uzun': with_overrides(example_translation='a' * 301),
             'hikaye yok': with_overrides(association_story='  '),
             'hikaye çok uzun': with_overrides(association_story='a' * (ai.MAX_STORY_LENGTH + 1)),
             'kelimeler liste değil': with_overrides(words='Break a leg'),
@@ -152,6 +163,8 @@ class GeneratePhraseTests(SimpleTestCase):
         self.assertEqual(create.call_count, 1)
         self.assertEqual(result.phrase, 'Break a leg')
         self.assertEqual(result.translation, 'Bol şans')
+        self.assertEqual(result.example_sentence, 'Break a leg tonight.')
+        self.assertEqual(result.example_translation, 'Bu gece bol şanslar.')
         self.assertEqual([item['order'] for item in result.word_breakdown], [1, 2, 3])
         self.assertEqual((result.input_tokens, result.output_tokens, result.thought_tokens), (100, 50, 20))
 
@@ -255,7 +268,9 @@ class QuotaTests(TestCase):
         self.assertEqual(ai.remaining_generations(self.user), 0)
 
     def test_record_generation_stores_usage(self):
-        result = ai.GeneratedPhrase('Break a leg', 'Bol şans', [], 'Hikaye', 10, 20, 30)
+        result = ai.GeneratedPhrase(
+            'Break a leg', 'Bol şans', [], 'Hikaye', 'Break a leg tonight.', 'Bu gece bol şanslar.', 10, 20, 30,
+        )
         record = ai.record_generation(self.user, result, 'es')
         self.assertEqual((record.input_tokens, record.output_tokens, record.thought_tokens), (10, 20, 30))
         self.assertEqual(record.prompt_text, 'Break a leg')
@@ -273,6 +288,8 @@ def fake_generation(phrase='Break a leg'):
             for index, (word, hint) in enumerate(zip(words, hints), start=1)
         ],
         association_story='Komik bir hikaye.',
+        example_sentence=f'{" ".join(words)} tonight.',
+        example_translation='Örnek cümlenin Türkçe anlamı.',
         input_tokens=100, output_tokens=50, thought_tokens=20,
     )
 
@@ -319,7 +336,10 @@ class AIViewTests(TestCase):
         self.assertContains(response, 'Yeniden üret')
         self.assertContains(response, 'Bugün kalan hak: 2')
         content = response.content.decode()
-        for text in ('value="Break a leg"', 'value="Bol şans"', 'Komik bir hikaye.'):
+        for text in (
+            'value="Break a leg"', 'value="Bol şans"', 'Komik bir hikaye.',
+            'value="Break a leg tonight."', 'value="Örnek cümlenin Türkçe anlamı."',
+        ):
             self.assertIn(text, content)
         positions = [content.index(f'value="{value}"') for value in ('Break', 'ses1', 'ses2', 'ses3')]
         self.assertEqual(positions, sorted(positions))
@@ -388,6 +408,8 @@ class AIViewTests(TestCase):
             'target_language': 'en',
             'original_phrase': 'Break a leg',
             'translation': 'Bol şans',
+            'example_sentence': 'Break a leg tonight.',
+            'example_sentence_translation': 'Bu gece bol şanslar.',
             'association_story': 'Komik bir hikaye.',
             'original_word': ['Break', 'a', 'leg'],
             'sound_hint': ['Bırak', 'Ey', 'Lig'],

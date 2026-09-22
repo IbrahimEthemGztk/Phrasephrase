@@ -137,6 +137,8 @@ def _preview_form(result, language_code):
             'target_language': language_code,
             'original_phrase': result.phrase,
             'translation': result.translation,
+            'example_sentence': result.example_sentence,
+            'example_sentence_translation': result.example_translation,
             'association_story': result.association_story,
         },
         initial_breakdown=result.word_breakdown,

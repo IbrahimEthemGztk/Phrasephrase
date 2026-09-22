@@ -23,12 +23,15 @@ class ExampleWord:
 
 @dataclass(frozen=True)
 class Example:
-    """AI istemindeki bir few-shot örneği: gerçek bir ifade, sesteşleri ve bağlayan hikaye."""
+    """AI istemindeki bir few-shot örneği: gerçek bir ifade, sesteşleri, bağlayan hikaye ve ifadenin
+    gerçek bir cümle içinde kullanıldığı bir örnek (o cümlenin Türkçe çevirisiyle birlikte)."""
 
     phrase: str
     translation: str
     words: tuple[ExampleWord, ...]
     story: str
+    example_sentence: str
+    example_translation: str
 
 
 @dataclass(frozen=True)
@@ -64,6 +67,8 @@ TARGET_LANGUAGES = {
                     'Antrenör sahaya çıkacak oyuncuya döndü: "Korkuyu bırak! Ey genç, Süper Lig seni '
                     'bekliyor. Bol şans!"'
                 ),
+                example_sentence='Break a leg tonight, the audience is going to love you.',
+                example_translation='Bu gece bol şanslar, seyirci seni sevecek.',
             ),
             Example(
                 phrase='Piece of cake', translation='Çocuk oyuncağı (çok kolay)',
@@ -72,6 +77,8 @@ TARGET_LANGUAGES = {
                     'Pis elli bir çocuk yere düşen kekine baktı, "Of" diye içini çekti ve yine de yedi. '
                     'Çünkü kek yemek onun için çocuk oyuncağıydı: çok kolay!'
                 ),
+                example_sentence="Don't worry about the exam, it will be a piece of cake.",
+                example_translation='Sınav için endişelenme, çocuk oyuncağı olacak.',
             ),
         ),
     ),
@@ -89,6 +96,8 @@ TARGET_LANGUAGES = {
                     'Dar bir ofiste çalışan yazılımcı, ekranın enini ölçtükten sonra elini uzattı ve '
                     'klavyede tam doğru tuşa bastı: sorunu tam on ikiden çözmüştü!'
                 ),
+                example_sentence='Con esa respuesta, diste en el clavo.',
+                example_translation='O cevapla tam on ikiden vurdun.',
             ),
             Example(
                 phrase='Tirar la toalla', translation='Pes etmek',
@@ -97,6 +106,8 @@ TARGET_LANGUAGES = {
                     'Zalim bir tiran, sarayında "la" notasını bir türlü tutturamayan şarkıcıyı dinleyince '
                     'öfkeyle masadaki tavlayı fırlatıp pes etti.'
                 ),
+                example_sentence='Después de tantos intentos, decidió tirar la toalla.',
+                example_translation='Bu kadar denemeden sonra pes etmeye karar verdi.',
             ),
         ),
     ),

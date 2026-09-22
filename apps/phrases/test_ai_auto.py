@@ -20,12 +20,15 @@ EN = languages.TARGET_LANGUAGES['en']
 
 
 def auto_json(phrase=PHRASE, translation='İşler sözden yüksek konuşur', story='Komik bir hikaye.', hints=None,
-              **overrides):
+              example_sentence='Actions speak louder than words, so just do it.',
+              example_translation='İşler sözden yüksek konuşur, o yüzden hemen yap.', **overrides):
     words = phrase.split()
     hints = hints or [f'ses{index}' for index in range(1, len(words) + 1)]
     data = {
         'phrase': phrase,
         'translation': translation,
+        'example_sentence': example_sentence,
+        'example_translation': example_translation,
         'words': [{'original_word': word, 'sound_hint': hint} for word, hint in zip(words, hints)],
         'association_story': story,
     }
@@ -35,15 +38,21 @@ def auto_json(phrase=PHRASE, translation='İşler sözden yüksek konuşur', sto
 
 class ParseAutoReplyTests(SimpleTestCase):
     def test_valid_reply_returns_phrase_and_server_assigned_order(self):
-        phrase, translation, breakdown, story = ai.parse_auto_reply(auto_json(), [], EN)
+        phrase, translation, example_sentence, example_translation, breakdown, story = ai.parse_auto_reply(
+            auto_json(), [], EN,
+        )
         self.assertEqual(phrase, PHRASE)
         self.assertEqual(translation, 'İşler sözden yüksek konuşur')
+        self.assertEqual(example_sentence, 'Actions speak louder than words, so just do it.')
+        self.assertEqual(example_translation, 'İşler sözden yüksek konuşur, o yüzden hemen yap.')
         self.assertEqual(story, 'Komik bir hikaye.')
         self.assertEqual([item['order'] for item in breakdown], [1, 2, 3, 4, 5])
         self.assertEqual([item['original_word'] for item in breakdown], PHRASE.split())
 
     def test_phrase_whitespace_is_normalized_and_words_follow_the_same_split(self):
-        phrase, _, breakdown, _ = ai.parse_auto_reply(auto_json(phrase='  Actions   speak louder than words '), [], EN)
+        phrase, _, _, _, breakdown, _ = ai.parse_auto_reply(
+            auto_json(phrase='  Actions   speak louder than words '), [], EN,
+        )
         self.assertEqual(phrase, PHRASE)
         self.assertEqual(len(breakdown), 5)
 
@@ -331,6 +340,8 @@ class AutoViewTests(TestCase):
     def save_data(self, **overrides):
         data = {
             'target_language': 'en', 'original_phrase': PHRASE, 'translation': 'İşler sözden yüksek konuşur',
+            'example_sentence': 'Actions speak louder than words, so just do it.',
+            'example_sentence_translation': 'İşler sözden yüksek konuşur, o yüzden hemen yap.',
             'association_story': 'Komik bir hikaye.', 'category': 'random',
             'original_word': PHRASE.split(), 'sound_hint': ['a', 'b', 'c', 'd', 'e'],
         }
